@@ -1,318 +1,141 @@
-// Copyright 2017, Paul DeMarco.
-// All rights reserved. Use of this source code is governed by a
-// BSD-style license that can be found in the LICENSE file.
+import "package:flutter/material.dart";
 
+import 'avatar.dart';
+import 'messages.dart';
+import 'store.dart';
 
-import 'dart:convert';
-import 'dart:typed_data';
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final store = await Store.createStore();
 
-import 'package:ble_app/mesh_client.dart';
-import 'package:flutter/material.dart';
-
-import 'dart:math';
-import 'package:nearby_connections/nearby_connections.dart';
-
-void main() {
-  runApp(BeaconApp());
-}
-class BeaconApp extends StatefulWidget {
-  @override
-  _BeaconAppState createState() => _BeaconAppState();
-}
-
-class _BeaconAppState extends State<BeaconApp> {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: Text("Beacon App"),
-        ),
-        body: Body(),
-      ),
-    );
-  }
-}
-
-
-class Body extends StatefulWidget {
-  @override
-  _BodyState createState() => _BodyState();
-}
-
-class _BodyState extends State<Body> {
-
-  static String getRandString(int len) {
-    var random = Random.secure();
-    var values = List<int>.generate(len, (i) =>  random.nextInt(255));
-    return "u" + base64UrlEncode(values);
-  }
-
-  void _onPayloadReceived(Uint8List payload) {
-    String str = String.fromCharCodes(payload);
-    notify(str);
-  }
-
-  final Strategy strategy = Strategy.P2P_CLUSTER;
-  final String id = getRandString(2);
-
-  MeshClient client;
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    client = MeshClient(id, _onPayloadReceived);
-  }
-
-  void notify(Object obj) {
-    Scaffold.of(context).showSnackBar(SnackBar(content: Text(obj.toString())));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: ListView(
-          children: <Widget>[
-            // Text("Permissions"),
-            // Wrap(
-            //   children: <Widget>[
-            //     RaisedButton(
-            //       child: Text("checkLocationPermission"),
-            //       onPressed: () async {
-            //         if (await Nearby().checkLocationPermission())
-            //           notify("Location permissions granted :)");
-            //         else
-            //           notify("Location permissions not granted :(");
-            //       },
-            //     ),
-            //     RaisedButton(
-            //       child: Text("askLocationPermission"),
-            //       onPressed: () async {
-            //         if (await Nearby().askLocationPermission())
-            //           notify("Location permissions granted :)");
-            //         else
-            //           notify("Location permissions not granted :(");
-            //       },
-            //     ),
-            //     RaisedButton(
-            //       child: Text("checkExternalStoragePermission"),
-            //       onPressed: () async {
-            //         if (await Nearby().checkExternalStoragePermission())
-            //           notify("External storage permissions granted :)");
-            //         else
-            //           notify("External storage not permissions granted :(");
-            //       },
-            //     ),
-            //     RaisedButton(
-            //       child: Text("askExternalStoragePermission"),
-            //       onPressed: () {
-            //         Nearby().askExternalStoragePermission();
-            //       },
-            //     ),
-            //   ],
-            // ),
-            // Divider(),
-            // Text("Location Enabled"),
-            // Wrap(
-            //   children: <Widget>[
-            //     RaisedButton(
-            //       child: Text("checkLocationEnabled"),
-            //       onPressed: () async {
-            //         if (await Nearby().checkLocationEnabled())
-            //           notify("Location is on :)");
-            //         else
-            //           notify("Location if off :(");
-            //       },
-            //     ),
-            //     RaisedButton(
-            //       child: Text("enableLocationServices"),
-            //       onPressed: () async {
-            //         if (await Nearby().enableLocationServices())
-            //           notify("Location service enabled :)");
-            //         else
-            //           notify("Enabling location service failed :(");
-            //       },
-            //     ),
-            //   ],
-            // ),
-            Divider(),
-            Text("Client Id: $id"),
-            StreamBuilder<List<String>>(
-                stream: Stream.periodic(Duration(seconds: 1)).asyncMap((_) => client.getClientIds()),
-                initialData: [],
-                builder: (c, snapshot) => ListView(
-                  shrinkWrap: true,
-                  children: <Widget>[ ...snapshot.data.map((d) => Text(d)).toList() ],
-                )),
-            Divider(),
-            // Wrap(
-            //   children: <Widget>[
-            //     RaisedButton(
-            //       child: Text("Start Advertising"),
-            //       onPressed: () async {
-            //         try {
-            //           bool a = await Nearby().startAdvertising(
-            //             userName,
-            //             strategy,
-            //             onConnectionInitiated: onConnectionInit,
-            //             onConnectionResult: (id, status) {
-            //               notify(status.toString());
-            //             },
-            //             onDisconnected: (id) {
-            //               notify("Disconnected: $id");
-            //             },
-            //           );
-            //           notify("ADVERTISING: ${a.toString()}");
-            //         } catch (exception) {
-            //           notify(exception.toString());
-            //         }
-            //       },
-            //     ),
-            //     RaisedButton(
-            //       child: Text("Stop Advertising"),
-            //       onPressed: () async {
-            //         await Nearby().stopAdvertising();
-            //       },
-            //     ),
-            //   ],
-            // ),
-            // Wrap(
-            //   children: <Widget>[
-            //     RaisedButton(
-            //       child: Text("Start Discovery"),
-            //       onPressed: () async {
-            //         try {
-            //           print("Trying to run Nearby().startDiscovery");
-            //           bool a = await Nearby().startDiscovery(
-            //             userName,
-            //             strategy,
-            //             onEndpointFound: (id, name, serviceId) {
-            //               print("Endpoint found: $id $name $serviceId");
-            //
-            //               // show sheet automatically to request connection
-            //               showModalBottomSheet(
-            //                 context: context,
-            //                 builder: (builder) {
-            //                   return Center(
-            //                     child: Column(
-            //                       children: <Widget>[
-            //                         Text("id: " + id),
-            //                         Text("Name: " + name),
-            //                         Text("ServiceId: " + serviceId),
-            //                         RaisedButton(
-            //                           child: Text("Request Connection"),
-            //                           onPressed: () {
-            //                             Navigator.pop(context);
-            //                             Nearby().requestConnection(
-            //                               userName,
-            //                               id,
-            //                               onConnectionInitiated: (id, info) {
-            //                                 onConnectionInit(id, info);
-            //                               },
-            //                               onConnectionResult: (id, status) {
-            //                                 notify(status.toString());
-            //                               },
-            //                               onDisconnected: (id) {
-            //                                 notify(id.toString());
-            //                               },
-            //                             );
-            //                           },
-            //                         ),
-            //                       ],
-            //                     ),
-            //                   );
-            //                 },
-            //               );
-            //             },
-            //             onEndpointLost: (id) {
-            //               notify("Lost Endpoint:" + id);
-            //             },
-            //           );
-            //           notify("DISCOVERING: " + a.toString());
-            //         } catch (e) {
-            //           notify(e);
-            //         }
-            //       },
-            //     ),
-            //     RaisedButton(
-            //       child: Text("Stop Discovery"),
-            //       onPressed: () async {
-            //         await Nearby().stopDiscovery();
-            //       },
-            //     ),
-            //   ],
-            // ),
-            // RaisedButton(
-            //   child: Text("Stop All Endpoints"),
-            //   onPressed: () async {
-            //     await Nearby().stopAllEndpoints();
-            //   },
-            // ),
-            Divider(),
-            Text(
-              "Sending Data",
-            ),
-            RaisedButton(
-              child: Text("Broadcast Random Bytes Payload"),
-              onPressed: () async {
-                String a = Random().nextInt(100).toString();
-                notify("Broadcasting $a");
-                client.broadcastPayload(Uint8List.fromList(a.codeUnits));
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  //
-  // void onConnectionInit(String id, ConnectionInfo info) {
-  //   showModalBottomSheet(
-  //     context: context,
-  //     builder: (builder) {
-  //       return Center(
-  //         child: Column(
-  //           children: <Widget>[
-  //             Text("id: " + id),
-  //             Text("Token: " + info.authenticationToken),
-  //             Text("Name" + info.endpointName),
-  //             Text("Incoming: " + info.isIncomingConnection.toString()),
-  //             RaisedButton(
-  //               child: Text("Accept Connection"),
-  //               onPressed: () {
-  //                 Navigator.pop(context);
-  //                 cId = id;
-  //                 Nearby().acceptConnection(
-  //                   id,
-  //                   onPayLoadRecieved: (endid, payload) async {
-  //                     if (payload.type == PayloadType.BYTES) {
-  //                       String str = String.fromCharCodes(payload.bytes);
-  //                       notify(endid + ": " + str);
-  //                     }
-  //                   },
-  //                   onPayloadTransferUpdate: (endid, payloadTransferUpdate) {
-  //                   },
-  //                 );
-  //               },
-  //             ),
-  //             RaisedButton(
-  //               child: Text("Reject Connection"),
-  //               onPressed: () async {
-  //                 Navigator.pop(context);
-  //                 try {
-  //                   await Nearby().rejectConnection(id);
-  //                 } catch (e) {
-  //                   notify(e);
-  //                 }
-  //               },
-  //             ),
-  //           ],
-  //         ),
-  //       );
-  //     },
-  //   );
+  // for (int i = 0; i < 5; i++) {
+  //   await store.handleMessage(Message(
+  //     id: "message_${i}_2",
+  //     timestamp: DateTime.now().add(Duration(seconds: i)),
+  //     fromId: "User$i",
+  //     toId: "UserMe",
+  //     data: "Second Message from $i",
+  //   ));
+  //   await store.handleMessage(Message(
+  //     id: "broadcast_message_${i}_2",
+  //     timestamp: DateTime.now().add(Duration(seconds: i)),
+  //     fromId: "User$i",
+  //     toId: "",
+  //     data: "Second Broadcast Message from $i"
+  //   ));
   // }
 
+  runApp(ChatApp(store: store));
+}
+
+class ChatApp extends StatelessWidget {
+  final Store store;
+
+  const ChatApp({Key key, this.store}) : super(key: key);
+
+  // This widget is the root of your application.
+  @override
+  Widget build(BuildContext context) {
+    return StoreProvider(
+      store: store,
+      child: MaterialApp(
+        title: "Beacon",
+        theme: ThemeData(
+          brightness: Brightness.dark,
+          primarySwatch: Colors.deepOrange,
+          accentColor: Colors.deepOrange,
+          // primarySwatch: Colors.pink,
+          // accentColor: Colors.pink,
+        ),
+        // theme: ThemeData.light(),
+        // theme: ThemeData(
+        //   primarySwatch: Colors.blue,
+        // ),
+        home: HomePage(),
+      ),
+    );
+  }
+}
+
+class HomePage extends StatefulWidget {
+  HomePage({Key key}) : super(key: key);
+
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Beacon"),
+      ),
+      body: ListView.builder(
+        itemBuilder: (context, i) {
+          return ListTile(
+            leading: Avatar(user: "$i", size: 40.0),
+            title: Text("User $i"),
+            subtitle: Text("Last message"),
+            onTap: () {
+              Navigator.push(context, new MaterialPageRoute(builder: (context) {
+                return new ChatPage(userId: "$i");
+              }));
+            },
+          );
+        },
+        itemCount: 5,
+      ),
+    );
+  }
+}
+
+class ChatPage extends StatefulWidget {
+  final String userId;
+
+  const ChatPage({Key key, this.userId}) : super(key: key);
+
+  @override
+  _ChatPageState createState() => _ChatPageState();
+}
+
+class _ChatPageState extends State<ChatPage> {
+  List<Message> _messages;
+
+  @override
+  void initState() {
+    super.initState();
+    _messages = [
+      Message(
+        id: "id1",
+        data:
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec a "
+            "felis vitae purus sodales varius. Etiam nunc urna, dignissim et"
+            " quam in, imperdiet accumsan magna. Etiam sodales tempor eros eu cursus.",
+        timestamp: DateTime.now(),
+        fromId: widget.userId,
+        toId: "",
+      )
+    ];
+  }
+
+  void _send(Message newMessage) {
+    setState(() => _messages.insert(0, newMessage));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Beacon"),
+      ),
+      body: SafeArea(
+        child: MessageList(
+          currentUserId: "1",
+          messages: _messages,
+          onMessageSend: _send,
+        ),
+      ),
+    );
+  }
 }

@@ -1,6 +1,6 @@
-# ble_app
+# chat
 
-BLE flutter application
+Chat app
 
 ## Getting Started
 
