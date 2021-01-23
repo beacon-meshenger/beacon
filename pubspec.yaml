@@ -24,6 +24,7 @@ dependencies:
   flutter:
     sdk: flutter
 
+  logger: ^0.9.4
   nearby_connections: ^2.0.2
 
   # The following adds the Cupertino Icons font to your application.
