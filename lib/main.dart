@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import "package:flutter/material.dart";
 
 import 'avatar.dart';
@@ -67,73 +69,90 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
+    final store = Store.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text("Beacon"),
       ),
-      body: ListView.builder(
-        itemBuilder: (context, i) {
-          return ListTile(
-            leading: Avatar(user: "$i", size: 40.0),
-            title: Text("User $i"),
-            subtitle: Text("Last message"),
-            onTap: () {
-              Navigator.push(context, new MaterialPageRoute(builder: (context) {
-                return new ChatPage(userId: "$i");
-              }));
-            },
-          );
-        },
-        itemCount: 5,
-      ),
+      body: StreamBuilder<Map<String, String>>(
+          stream: store.channels(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return Container();
+            final list = snapshot.data.entries.toList();
+            return ListView.builder(
+              itemBuilder: (context, i) {
+                return ListTile(
+                  leading: Avatar(
+                    user: list[i].key == "" ? "@" : list[i].key,
+                    size: 40.0,
+                  ),
+                  title: Text(list[i].key == "" ? "Everyone" : list[i].key),
+                  subtitle: Text(list[i].value),
+                  onTap: () {
+                    Navigator.push(context,
+                        new MaterialPageRoute(builder: (context) {
+                      return new ChatPage(channelId: list[i].key);
+                    }));
+                  },
+                );
+              },
+              itemCount: list.length,
+            );
+          }),
     );
   }
 }
 
 class ChatPage extends StatefulWidget {
-  final String userId;
+  final String channelId;
 
-  const ChatPage({Key key, this.userId}) : super(key: key);
+  const ChatPage({Key key, this.channelId}) : super(key: key);
 
   @override
   _ChatPageState createState() => _ChatPageState();
 }
 
 class _ChatPageState extends State<ChatPage> {
-  List<Message> _messages;
+  List<Message> _messages = [];
+  StreamSubscription<List<Message>> _subscription;
 
   @override
-  void initState() {
-    super.initState();
-    _messages = [
-      Message(
-        id: "id1",
-        data:
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec a "
-            "felis vitae purus sodales varius. Etiam nunc urna, dignissim et"
-            " quam in, imperdiet accumsan magna. Etiam sodales tempor eros eu cursus.",
-        timestamp: DateTime.now(),
-        fromId: widget.userId,
-        toId: "",
-      )
-    ];
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_subscription == null) {
+      _subscription =
+          Store.of(context).messages(widget.channelId).listen((messages) {
+        setState(() => _messages = messages);
+      });
+    }
   }
 
-  void _send(Message newMessage) {
-    setState(() => _messages.insert(0, newMessage));
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final store = Store.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text("Beacon"),
       ),
       body: SafeArea(
         child: MessageList(
-          currentUserId: "1",
+          currentUserId: "UserMe", // TODO: dynamic from store probably
           messages: _messages,
-          onMessageSend: _send,
+          onMessageSend: (newMessage) {
+            store.handleMessage(Message(
+              id: DateTime.now().toString(), // TODO: use id instead
+              timestamp: DateTime.now(),
+              fromId: "UserMe",
+              toId: widget.channelId,
+              data: newMessage,
+            ));
+          },
         ),
       ),
     );

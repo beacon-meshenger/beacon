@@ -23,10 +23,16 @@ class StoreProvider extends InheritedWidget {
   bool updateShouldNotify(covariant StoreProvider oldWidget) => false;
 }
 
-String _channelId({@required String fromId, @required String toId}) {
-  if (toId == "") return "";
-  final order = toId.compareTo(fromId) < 0;
-  return "${order ? toId : fromId}-${order ? fromId : toId}";
+String _channelId({
+  @required String fromId,
+  @required String toId,
+  @required String currentId,
+}) {
+  return toId == ""
+      ? ""
+      : fromId == currentId
+          ? toId
+          : fromId;
 }
 
 const _kUserPrefix = "user:";
@@ -56,11 +62,15 @@ class Message {
     @required this.data,
   });
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toMap({@required String currentId}) {
     return {
       _kMessageKeyId: id,
       _kMessageKeyTimestamp: timestamp.millisecondsSinceEpoch ~/ 1000,
-      _kMessageKeyChannelId: _channelId(fromId: fromId, toId: toId),
+      _kMessageKeyChannelId: _channelId(
+        fromId: fromId,
+        toId: toId,
+        currentId: currentId,
+      ),
       _kMessageKeyFromId: fromId,
       _kMessageKeyToId: toId,
       _kMessageKeyData: data,
@@ -110,19 +120,20 @@ class Store {
     final path = join(await getDatabasesPath(), "store.db");
     final db = await openDatabase(path, version: 1, onCreate: _initDatabase);
     final prefs = await SharedPreferences.getInstance();
-
     print((await db.query(_kMessageTable)).join("\n"));
 
-//     final initialChannelsQuery = await db.rawQuery("""WITH ranked AS (SELECT channelId, data, row_number() OVER (PARTITION BY channelId ORDER BY timestamp DESC) AS row FROM message AS m)
-// SELECT channelId, data FROM ranked WHERE row = 1""");
-//     final initialChannels = new Map<String, String>.fromIterable(
-//       initialChannelsQuery,
-//       key: (map) => map["channelId"],
-//       value: (map) => map["data"],
-//     );
-//     print(initialChannels);
+    final initialChannelsQuery =
+        await db.rawQuery("""SELECT m1.channelId, m1.data
+FROM message m1 LEFT JOIN message m2
+ON (m1.channelId = m2.channelId AND m1.timestamp < m2.timestamp)
+WHERE m2.timestamp IS NULL;""");
+    final initialChannels = new SplayTreeMap<String, String>.fromIterable(
+      initialChannelsQuery,
+      key: (map) => map["channelId"],
+      value: (map) => map["data"],
+    );
 
-    return Store._(db: db, prefs: prefs, initialChannels: {});
+    return Store._(db: db, prefs: prefs, initialChannels: initialChannels);
   }
 
   final Database db;
@@ -130,6 +141,7 @@ class Store {
   final Map<String, String> _channels;
   final BehaviorSubject<Map<String, String>> _channelsSubject;
   final Map<String, ValueChanged<Message>> _newMessageCallbacks;
+  final String currentId = "UserMe"; // TODO: dynamic
 
   Store._({
     @required this.db,
@@ -172,7 +184,11 @@ class Store {
   }
 
   Future<void> handleMessage(Message message) async {
-    final channelId = _channelId(fromId: message.fromId, toId: message.toId);
+    final channelId = _channelId(
+      fromId: message.fromId,
+      toId: message.toId,
+      currentId: currentId,
+    );
     print("[Store] Handling channel \"$channelId\" message ${message.id}...");
     _channels[channelId] = message.data;
     _channelsSubject.add(UnmodifiableMapView(this._channels));
@@ -182,6 +198,6 @@ class Store {
       _newMessageCallbacks[channelId](message);
     }
 
-    await db.insert(_kMessageTable, message.toMap());
+    await db.insert(_kMessageTable, message.toMap(currentId: currentId));
   }
 }

@@ -102,7 +102,7 @@ class _Message extends StatelessWidget {
 class MessageList extends StatefulWidget {
   final String currentUserId;
   final List<Message> messages;
-  final ValueChanged<Message> onMessageSend;
+  final ValueChanged<String> onMessageSend;
 
   const MessageList({
     Key key,
@@ -133,13 +133,7 @@ class _MessageListState extends State<MessageList> {
 
   void _onSendClick() {
     if (widget.onMessageSend != null) {
-      widget.onMessageSend(Message(
-        id: DateTime.now().toString(),
-        data: _controller.text,
-        timestamp: DateTime.now(),
-        fromId: "1", // TODO: current user,
-        toId: "",
-      ));
+      widget.onMessageSend(_controller.text);
     }
     _controller.text = "";
   }
@@ -159,11 +153,7 @@ class _MessageListState extends State<MessageList> {
                 nextMessage: i > 0 ? widget.messages[i - 1] : null,
               );
             },
-            padding: const EdgeInsets.only(
-              left: 8.0,
-              right: 8.0,
-              bottom: 8.0,
-            ),
+            padding: const EdgeInsets.all(8.0),
             reverse: true,
             itemCount: widget.messages.length,
           ),
