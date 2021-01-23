@@ -1,169 +1,298 @@
+// Copyright 2017, Paul DeMarco.
+// All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+
+
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
-import 'package:flutter_blue/flutter_blue.dart';
-
+import 'dart:math';
+import 'package:nearby_connections/nearby_connections.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(BeaconApp());
+}
+class BeaconApp extends StatefulWidget {
+  @override
+  _BeaconAppState createState() => _BeaconAppState();
 }
 
-
-// class BluetoothOffScreen extends StatelessWidget {
-//   final BluetoothState state;
-//
-//   BluetoothOffScreen({Key key, this.state}) : super(key: key);
-//
-//   TODO:
-//
-// }
-
-class BeaconApp extends StatelessWidget {
-
-  // This widget is the root of your application.
+class _BeaconAppState extends State<BeaconApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Beacon App',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
-        // This makes the visual density adapt to the platform that you run
-        // the app on. For desktop platforms, the controls will be smaller and
-        // closer together (more dense) than on mobile platforms.
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text("Beacon App"),
+        ),
+        body: Body(),
       ),
-      home: MyHomePage(title: 'Flutter BLE Test'),
     );
   }
 }
 
-class DevicePage extends StatefulWidget {
 
-  final FlutterBlue flutterBlue = FlutterBlue.instance;
-  final List<BluetoothDevice> devicesList = new List<BluetoothDevice>();
-
-  DevicePage({Key key, this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
+class Body extends StatefulWidget {
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  _BodyState createState() => _BodyState();
 }
 
-class _DevicePageState extends State<DevicePage> {
+class _BodyState extends State<Body> {
 
-  _addDeviceToList(final BluetoothDevice device) {
-    if (!widget.devicesList.contains(device)) {
-      setState(() {
-        widget.devicesList.add(device);
-      });
-    }
+  static String getRandString(int len) {
+    var random = Random.secure();
+    var values = List<int>.generate(len, (i) =>  random.nextInt(255));
+    return base64UrlEncode(values);
   }
 
-  @override
-  void initState() {
-    super.initState();
+  final Strategy strategy = Strategy.P2P_STAR;
+  final String userName = getRandString(8);
 
-    widget.flutterBlue.connectedDevices
-      .asStream()
-      .listen((List<BluetoothDevice> devices) {
-        for (BluetoothDevice device in devices) {
-          _addDeviceToList(device);
-        }
-      });
+  String cId = "0";
 
-    widget.flutterBlue.scanResults.listen((List<ScanResult> results) {
-      for (ScanResult result in results) {
-        _addDeviceToList(result.device);
-      }
-    });
-
-    widget.flutterBlue.startScan();
+  void notify(Object obj) {
+    Scaffold.of(context).showSnackBar(SnackBar(content: Text(obj.toString())));
   }
-
-
-
-
-
-  // int _counter = 0;
-  //
-  // void _incrementCounter() {
-  //   setState(() {
-  //     // This call to setState tells the Flutter framework that something has
-  //     // changed in this State, which causes it to rerun the build method below
-  //     // so that the display can reflect the updated values. If we changed
-  //     // _counter without calling setState(), then the build method would not be
-  //     // called again, and so nothing would appear to happen.
-  //     _counter++;
-  //   });
-  // }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: ListView(
           children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
+            Text("Permissions"),
+            Wrap(
+              children: <Widget>[
+                RaisedButton(
+                  child: Text("checkLocationPermission"),
+                  onPressed: () async {
+                    if (await Nearby().checkLocationPermission())
+                      notify("Location permissions granted :)");
+                    else
+                      notify("Location permissions not granted :(");
+                  },
+                ),
+                RaisedButton(
+                  child: Text("askLocationPermission"),
+                  onPressed: () async {
+                    if (await Nearby().askLocationPermission())
+                      notify("Location permissions granted :)");
+                    else
+                      notify("Location permissions not granted :(");
+                  },
+                ),
+                RaisedButton(
+                  child: Text("checkExternalStoragePermission"),
+                  onPressed: () async {
+                    if (await Nearby().checkExternalStoragePermission())
+                      notify("External storage permissions granted :)");
+                    else
+                      notify("External storage not permissions granted :(");
+                  },
+                ),
+                RaisedButton(
+                  child: Text("askExternalStoragePermission"),
+                  onPressed: () {
+                    Nearby().askExternalStoragePermission();
+                  },
+                ),
+              ],
             ),
+            Divider(),
+            Text("Location Enabled"),
+            Wrap(
+              children: <Widget>[
+                RaisedButton(
+                  child: Text("checkLocationEnabled"),
+                  onPressed: () async {
+                    if (await Nearby().checkLocationEnabled())
+                      notify("Location is on :)");
+                    else
+                      notify("Location if off :(");
+                  },
+                ),
+                RaisedButton(
+                  child: Text("enableLocationServices"),
+                  onPressed: () async {
+                    if (await Nearby().enableLocationServices())
+                      notify("Location service enabled :)");
+                    else
+                      notify("Enabling location service failed :(");
+                  },
+                ),
+              ],
+            ),
+            Divider(),
+            Text("User Name: " + userName),
+            Wrap(
+              children: <Widget>[
+                RaisedButton(
+                  child: Text("Start Advertising"),
+                  onPressed: () async {
+                    try {
+                      bool a = await Nearby().startAdvertising(
+                        userName,
+                        strategy,
+                        onConnectionInitiated: onConnectionInit,
+                        onConnectionResult: (id, status) {
+                          notify(status.toString());
+                        },
+                        onDisconnected: (id) {
+                          notify("Disconnected: $id");
+                        },
+                      );
+                      notify("ADVERTISING: ${a.toString()}");
+                    } catch (exception) {
+                      notify(exception.toString());
+                    }
+                  },
+                ),
+                RaisedButton(
+                  child: Text("Stop Advertising"),
+                  onPressed: () async {
+                    await Nearby().stopAdvertising();
+                  },
+                ),
+              ],
+            ),
+            Wrap(
+              children: <Widget>[
+                RaisedButton(
+                  child: Text("Start Discovery"),
+                  onPressed: () async {
+                    try {
+                      print("Trying to run Nearby().startDiscovery");
+                      bool a = await Nearby().startDiscovery(
+                        userName,
+                        strategy,
+                        onEndpointFound: (id, name, serviceId) {
+                          print("Endpoint found: $id $name $serviceId");
+
+                          // show sheet automatically to request connection
+                          showModalBottomSheet(
+                            context: context,
+                            builder: (builder) {
+                              return Center(
+                                child: Column(
+                                  children: <Widget>[
+                                    Text("id: " + id),
+                                    Text("Name: " + name),
+                                    Text("ServiceId: " + serviceId),
+                                    RaisedButton(
+                                      child: Text("Request Connection"),
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        Nearby().requestConnection(
+                                          userName,
+                                          id,
+                                          onConnectionInitiated: (id, info) {
+                                            onConnectionInit(id, info);
+                                          },
+                                          onConnectionResult: (id, status) {
+                                            notify(status.toString());
+                                          },
+                                          onDisconnected: (id) {
+                                            notify(id.toString());
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        },
+                        onEndpointLost: (id) {
+                          notify("Lost Endpoint:" + id);
+                        },
+                      );
+                      notify("DISCOVERING: " + a.toString());
+                    } catch (e) {
+                      notify(e);
+                    }
+                  },
+                ),
+                RaisedButton(
+                  child: Text("Stop Discovery"),
+                  onPressed: () async {
+                    await Nearby().stopDiscovery();
+                  },
+                ),
+              ],
+            ),
+            RaisedButton(
+              child: Text("Stop All Endpoints"),
+              onPressed: () async {
+                await Nearby().stopAllEndpoints();
+              },
+            ),
+            Divider(),
             Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
+              "Sending Data",
+            ),
+            RaisedButton(
+              child: Text("Send Random Bytes Payload"),
+              onPressed: () async {
+                String a = Random().nextInt(100).toString();
+                notify("Sending $a to $cId");
+                Nearby().sendBytesPayload(cId, Uint8List.fromList(a.codeUnits));
+              },
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
+
+  void onConnectionInit(String id, ConnectionInfo info) {
+    showModalBottomSheet(
+      context: context,
+      builder: (builder) {
+        return Center(
+          child: Column(
+            children: <Widget>[
+              Text("id: " + id),
+              Text("Token: " + info.authenticationToken),
+              Text("Name" + info.endpointName),
+              Text("Incoming: " + info.isIncomingConnection.toString()),
+              RaisedButton(
+                child: Text("Accept Connection"),
+                onPressed: () {
+                  Navigator.pop(context);
+                  cId = id;
+                  Nearby().acceptConnection(
+                    id,
+                    onPayLoadRecieved: (endid, payload) async {
+                      if (payload.type == PayloadType.BYTES) {
+                        String str = String.fromCharCodes(payload.bytes);
+                        notify(endid + ": " + str);
+                      }
+                    },
+                    onPayloadTransferUpdate: (endid, payloadTransferUpdate) {
+                    },
+                  );
+                },
+              ),
+              RaisedButton(
+                child: Text("Reject Connection"),
+                onPressed: () async {
+                  Navigator.pop(context);
+                  try {
+                    await Nearby().rejectConnection(id);
+                  } catch (e) {
+                    notify(e);
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
 }
