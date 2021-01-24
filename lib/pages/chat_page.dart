@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:chat/locations.dart';
 import 'package:chat/widgets/avatar.dart';
 import 'package:chat/widgets/status.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../store.dart';
 
@@ -86,16 +88,25 @@ class _Message extends StatelessWidget {
     this.nextMessage,
   }) : super(key: key);
 
+  Future<void> _launchMessage() async {
+    if(await canLaunch(message.data)) {
+      await launch(message.data);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
     final ThemeData theme = Theme.of(context);
+    final Store store = Store.of(context);
     final received = message.fromId != currentUserId;
     final textAlign = received ? TextAlign.left : TextAlign.right;
     final endOfThread = this.nextMessage?.fromId != this.message.fromId ||
         (this.nextMessage != null &&
             this.nextMessage.timestamp.difference(this.message.timestamp) >
                 Duration(minutes: 1));
+
+    final isLocation = message.data.startsWith("geo:");
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -105,7 +116,7 @@ class _Message extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 18.0),
               child: Avatar(
-                user: message.fromName[0],
+                user: message.fromName(store.prefs)[0],
                 color: theme.accentColor,
               ),
             )
@@ -122,29 +133,32 @@ class _Message extends StatelessWidget {
                 AnimatedOpacity(
                   duration: const Duration(milliseconds: 500),
                   opacity: !received && !message.acknowledged ? 0.5 : 1.0,
-                  child: Container(
-                    // margin: const EdgeInsets.symmetric(vertical: 4.0),
-                    constraints: BoxConstraints(maxWidth: size.width * 2 / 3),
-                    decoration: BoxDecoration(
-                      color: received
-                          ? (theme.brightness == Brightness.light
-                              ? Colors.grey[200]
-                              : Colors.grey[800])
-                          : theme.accentColor,
-                      borderRadius: received ? _receivedRadius : _sentRadius,
-                    ),
-                    padding: const EdgeInsets.all(8.0),
-                    margin: EdgeInsets.only(
-                      top: 4.0,
-                      bottom: endOfThread ? 4.0 : 0.0,
-                    ),
-                    child: Text(
-                      message.data,
-                      style: TextStyle(
-                        color: received ? null : Colors.white,
-                        height: 1.4,
+                  child: GestureDetector(
+                    onTap: isLocation ? _launchMessage : null,
+                    child: Container(
+                      // margin: const EdgeInsets.symmetric(vertical: 4.0),
+                      constraints: BoxConstraints(maxWidth: size.width * 2 / 3),
+                      decoration: BoxDecoration(
+                        color: received
+                            ? (theme.brightness == Brightness.light
+                                ? Colors.grey[200]
+                                : Colors.grey[800])
+                            : theme.accentColor,
+                        borderRadius: received ? _receivedRadius : _sentRadius,
                       ),
-                      textAlign: textAlign,
+                      padding: const EdgeInsets.all(8.0),
+                      margin: EdgeInsets.only(
+                        top: 4.0,
+                        bottom: endOfThread ? 4.0 : 0.0,
+                      ),
+                      child: Text(
+                        isLocation ? "Shared Location" : message.data,
+                        style: TextStyle(
+                          color: received ? null : Colors.white,
+                          height: 1.4,
+                        ),
+                        textAlign: textAlign,
+                      ),
                     ),
                   ),
                 ),
@@ -204,6 +218,15 @@ class _MessageListState extends State<_MessageList> {
       widget.onMessageSend(_controller.text);
     }
     _controller.text = "";
+  }
+
+  void _onSendLocationClick() async {
+    if (widget.onMessageSend != null) {
+      final position = await getCurrentPosition();
+      if (position != null) {
+        widget.onMessageSend("geo:${position.latitude},${position.longitude}");
+      }
+    }
   }
 
   @override
@@ -269,6 +292,12 @@ class _MessageListState extends State<_MessageList> {
                     tooltip: "Send",
                     color: theme.accentColor,
                     onPressed: _controller.text.isEmpty ? null : _onSendClick,
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.location_on_outlined),
+                    tooltip: "Send Location",
+                    color: theme.accentColor,
+                    onPressed: _onSendLocationClick,
                   ),
                 ],
               ),
