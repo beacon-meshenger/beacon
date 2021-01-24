@@ -120,6 +120,33 @@ class MeshClient {
     await restart();
   }
 
+  Future<void> _onConnectionInitiated(String endpointId, ConnectionInfo info) async {
+    LOG.i("Connection Initiated with ${endpointId}.");
+    idNameMap[endpointId] = info.endpointName;
+    Nearby().acceptConnection(endpointId, onPayLoadRecieved: _onPayLoadReceived);
+  }
+
+  Future<void> _onConnectionResult(String endpointId, Status status) async {
+    if (status == Status.CONNECTED) {
+      // We have successfully connected to an endpoint
+      // Thus we need to disable discovery and re-enable advertising
+      LOG.i("Connected: ${endpointId}, ${idNameMap[endpointId]}");
+
+      // If the client satisfies N > id then no action else stop discovery
+      if (!(_clientName.compareTo(idNameMap[endpointId]) > 0)) {
+        await stopDiscovery();
+      }
+
+    } else {
+      // If we have failed to connect, then remove the endpoint
+      // entry
+      LOG.w("Failed to connect: ${endpointId}, ${idNameMap[endpointId]}");
+      idNameMap.remove(endpointId);
+    }
+  }
+
+
+
 
   @override
   Future<void> startDiscovery() async {
@@ -141,27 +168,9 @@ class MeshClient {
           try {
             await Nearby().requestConnection(
               _clientName, endpointId,
-              onConnectionInitiated: (endpointId, info) async {
-                LOG.i("Connection Initiated with ${endpointId}.");
-                idNameMap[endpointId] = endpointName;
-                Nearby().acceptConnection(
-                    endpointId, onPayLoadRecieved: _onPayLoadReceived);
-              },
+              onConnectionInitiated: _onConnectionInitiated,
               onConnectionResult: (endpointId, status) async {
-                if (status == Status.CONNECTED) {
-                  // We have successfully connected to an endpoint
-                  // Thus we need to disable discovery and re-enable advertising
-                  LOG.i("Connected: ${endpointId}, ${idNameMap[endpointId]}");
-                  await stopDiscovery();
-
-                  // Advertising is restarted below: (degenerate case)
-                } else {
-                  // If we have failed to connect, then remove the endpoint
-                  // entry
-                  LOG.w(
-                      "Failed to connect: ${endpointId}, ${idNameMap[endpointId]}");
-                  idNameMap.remove(endpointId);
-                }
+                await _onConnectionResult(endpointId, status);
 
                 // We have failed to connect (or we have connected).
                 // Either way, we must enable advertising
@@ -185,34 +194,8 @@ class MeshClient {
     try {
       await Nearby().startAdvertising(
           _clientName, STRATEGY,
-          onConnectionInitiated: (endpointId, ConnectionInfo info) async {
-            LOG.i("Connection Initiated with ${endpointId}.");
-            // Perform comparison on info.endpointName to ensure acyclic property
-            if (_clientName.compareTo(info.endpointName) > 0) {
-              LOG.i("Accepting connection :)");
-              // Yay! We have N1 > N2. Accept the connection :)
-              idNameMap[endpointId] = info.endpointName;
-              Nearby().acceptConnection(
-                  endpointId, onPayLoadRecieved: _onPayLoadReceived);
-            } else {
-              LOG.w("Rejecting connection :(");
-              // Noooooo. We cannot connect at this end of the chain :(
-              // Hopefully? the device will try to connect at the head :) (who knows...)
-              Nearby().rejectConnection(endpointId);
-            }
-          },
-          onConnectionResult: (endpointId, status) async {
-            if (status == Status.CONNECTED) {
-              // We've successfully connected :)
-              LOG.i("Connected: ${endpointId}, ${idNameMap[endpointId]}");
-            } else {
-              // We failed to connect :(
-              // Remove the entry from nodes.
-              LOG.w(
-                  "Failed to connect: ${endpointId}, ${idNameMap[endpointId]}");
-              idNameMap.remove(endpointId);
-            }
-          },
+          onConnectionInitiated: _onConnectionInitiated,
+          onConnectionResult: _onConnectionResult,
           onDisconnected: _onDisconnected
       );
     } on PlatformException catch (e) {
