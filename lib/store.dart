@@ -211,7 +211,7 @@ WHERE m2.timestamp IS NULL;""");
   final BehaviorSubject<int> _connectedDevicesSubject;
 
   MeshClient _mesh;
-  MessengerClient _messenger;
+  MessengerClient messenger;
 
   Store._({
     @required this.db,
@@ -227,10 +227,10 @@ WHERE m2.timestamp IS NULL;""");
         _connectedDevicesSubject = BehaviorSubject<int>.seeded(null) {
     _mesh = MeshClient(currentId, _onConnectedDevicesChanged);
     _mesh.initialise().then((_) => _mesh.start());
-    _messenger = MessengerClient(currentId, currentName, _mesh);
+    messenger = MessengerClient(currentId, currentName, _mesh);
     print("Set up messenger");
 
-    _messenger.registerOnMessageReceivedCallback(_onMessageReceived);
+    messenger.registerOnMessageReceivedCallback(_onMessageReceived);
   }
   
   void _onConnectedDevicesChanged(int devices) {
@@ -319,9 +319,9 @@ WHERE m2.timestamp IS NULL;""");
   Future<void> sendMessage(String channelId, String contents) async {
     String id;
     if (channelId.isEmpty) {
-      id = _messenger.sendBroadcast(contents);
+      id = messenger.sendBroadcast(contents);
     } else {
-      id = _messenger.sendDirectTextMessage(channelId, contents);
+      id = messenger.sendDirectTextMessage(channelId, contents);
     }
     await handleMessage(Message(
       id: id,
@@ -378,7 +378,7 @@ WHERE m2.timestamp IS NULL;""");
   }
 
   Future<void> handleNameChange(String name) async {
-    _messenger.clientNickname = name;
+    messenger.clientNickname = name;
     _currentNameSubject.add(name);
     await prefs.setString(_kPrefCurrentName, name);
   }
