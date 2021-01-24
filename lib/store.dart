@@ -239,7 +239,7 @@ WHERE m2.timestamp IS NULL;""");
 
   Future<void> _onMessageReceived(DMMessage msg) async {
     print(msg.toString());
-    if (msg.type == "MsgAck") {
+    if (msg.type == "DMAck") {
       await acknowledgeMessage(
         _channelId(
           fromId: msg.srcName,
