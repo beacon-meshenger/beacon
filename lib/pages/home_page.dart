@@ -24,7 +24,7 @@ class _HomePageState extends State<HomePage> {
           return Scaffold(
             appBar: AppBar(
               title: const Text("Beacon"),
-              bottom: Status(),
+              bottom: Status(false),
               actions: [
                 if (hasName)
                   IconButton(
