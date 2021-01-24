@@ -15,6 +15,7 @@ class _QRCodePageState extends State<QRCodePage> {
   String scanned;
   String data;
   String addedUser;
+  GlobalKey<ScaffoldState> scaffoldState;
 
   @override
   void initState() {
@@ -38,6 +39,7 @@ class _QRCodePageState extends State<QRCodePage> {
     final Store store = Store.of(context);
 
     return Scaffold(
+      key: scaffoldState,
       appBar: AppBar(
         title: const Text("Add Users"),
       ),
@@ -116,9 +118,7 @@ class _QRCodePageState extends State<QRCodePage> {
 
 
           // Successfully added
-          setState(() {
-            addedUser = decodedScanval['name'];
-          });
+          scaffoldState.currentState.showSnackBar(new SnackBar(content: new Text('Hello!')));
         },
 
         tooltip: 'Add user',
