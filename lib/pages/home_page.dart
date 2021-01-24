@@ -1,3 +1,4 @@
+import 'package:chat/widgets/status.dart';
 import 'package:flutter/material.dart';
 
 import '../store.dart';
@@ -19,6 +20,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Beacon"),
+        bottom: Status(),
         actions: [
           IconButton(
             icon: Icon(Icons.qr_code),

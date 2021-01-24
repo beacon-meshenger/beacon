@@ -35,7 +35,7 @@ class _QRCodePageState extends State<QRCodePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Beacon"),
+        title: const Text("Add Users"),
       ),
       body: SafeArea(
         child: Center(

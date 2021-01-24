@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:chat/widgets/avatar.dart';
+import 'package:chat/widgets/status.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -43,6 +44,7 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(nameForChannelId(store.prefs, widget.channelId)),
+        bottom: Status(),
       ),
       body: SafeArea(
         child: _MessageList(

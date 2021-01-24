@@ -19,6 +19,7 @@ class MeshClient {
   final BiMap<String, String> _sessionIdClientIdMap = new BiMap<String, String>();
   final List<String> _clientIds = new List<String>();
 
+  final ValueChanged<int> _connectedDevicesCallback;
 
   Future<bool> _enableLocation() async {
     bool locationPermissionGranted = await Nearby().askLocationPermission();
@@ -60,12 +61,14 @@ class MeshClient {
     _clientIds.remove(_sessionIdClientIdMap[id]);
     _sessionIdClientIdMap.remove(id);
     LOG.i("Disconnected: $id");
+    _connectedDevicesCallback(_clientIds.length);
   }
 
   void _onConnectionResult(String id, Status status) {
     if (status == Status.CONNECTED) {
       LOG.i("Connected: $id");
       _clientIds.add(_sessionIdClientIdMap[id]);
+      _connectedDevicesCallback(_clientIds.length);
     } else {
       _onDisconnected(id);
     }
@@ -93,12 +96,13 @@ class MeshClient {
 
 
 
-  MeshClient(String this._clientId) {
+  MeshClient(String this._clientId, this._connectedDevicesCallback) {
     Logger.level = Level.info;
 
     _enableLocation().then((bool success) async {
       if (success) await _initService();
       LOG.i("Service started");
+      _connectedDevicesCallback(_clientIds.length);
     });
   }
 

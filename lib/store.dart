@@ -193,6 +193,7 @@ WHERE m2.timestamp IS NULL;""");
   final Map<String, ValueChanged<MapEntry<bool, Message>>> _messageCallbacks;
   final String currentId;
   final BehaviorSubject<String> _currentNameSubject;
+  final BehaviorSubject<int> _connectedDevicesSubject;
 
   MeshClient _mesh;
   MessengerClient _messenger;
@@ -207,15 +208,20 @@ WHERE m2.timestamp IS NULL;""");
         _channelsSubject =
             BehaviorSubject.seeded(UnmodifiableMapView(channels)),
         _messageCallbacks = {},
-        _currentNameSubject = BehaviorSubject.seeded(currentName) {
-    _mesh = MeshClient(currentId);
+        _currentNameSubject = BehaviorSubject.seeded(currentName),
+        _connectedDevicesSubject = BehaviorSubject<int>.seeded(null) {
+    _mesh = MeshClient(currentId, _onConnectedDevicesChanged);
     _messenger = MessengerClient(currentId, currentName, _mesh);
     print("Set up messenger");
 
-    _messenger.registerOnMessageReceivedCallback(onMessageReceived);
+    _messenger.registerOnMessageReceivedCallback(_onMessageReceived);
+  }
+  
+  void _onConnectedDevicesChanged(int devices) {
+    _connectedDevicesSubject.add(devices);
   }
 
-  Future<void> onMessageReceived(DMMessage msg) async {
+  Future<void> _onMessageReceived(DMMessage msg) async {
     print(msg.toString());
     if (msg.type == "MsgAck") {
       // TODO: Handle sent/delivered
@@ -277,6 +283,11 @@ WHERE m2.timestamp IS NULL;""");
   Stream<String> name() {
     print("[Store] Subscribing to name...");
     return _currentNameSubject.stream;
+  }
+
+  Stream<int> connectedDevices() {
+    print("[Store] Subscribing to connected devices...");
+    return _connectedDevicesSubject.stream;
   }
 
   Future<void> sendMessage(String channelId, String contents) async {
