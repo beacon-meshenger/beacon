@@ -181,7 +181,7 @@ class _Message extends StatelessWidget {
                 ),
                 if (endOfThread)
                   Text(
-                (showFullName ? "$fromName, " : "") +
+                (showFullName && received ? "$fromName, " : "") +
                     _dateFormat.format(message.timestamp) +
                         (received
                             ? ""
