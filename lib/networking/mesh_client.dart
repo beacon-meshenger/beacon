@@ -48,6 +48,11 @@ class MeshClient {
 
   // Managing the Nearby Protocols
 
+  Future<void> stopAllEndpoints() async {
+    await Nearby().stopAllEndpoints();
+    idNameMap.clear();
+  }
+
   Future<void> restart() async {
     await stop();
     await start();
@@ -133,36 +138,40 @@ class MeshClient {
           await stopAdvertising();
 
           LOG.i("Requesting connection ");
-          await Nearby().requestConnection(
-            _clientName, endpointId,
-            onConnectionInitiated: (endpointId, info) async {
-              LOG.i("Connection Initiated with ${endpointId}.");
-              idNameMap[endpointId] = endpointName;
-              Nearby().acceptConnection(
-                  endpointId, onPayLoadRecieved: _onPayLoadReceived);
-            },
-            onConnectionResult: (endpointId, status) async {
-              if (status == Status.CONNECTED) {
-                // We have successfully connected to an endpoint
-                // Thus we need to disable discovery and re-enable advertising
-                LOG.i("Connected: ${endpointId}, ${idNameMap[endpointId]}");
-                await stopDiscovery();
+          try {
+            await Nearby().requestConnection(
+              _clientName, endpointId,
+              onConnectionInitiated: (endpointId, info) async {
+                LOG.i("Connection Initiated with ${endpointId}.");
+                idNameMap[endpointId] = endpointName;
+                Nearby().acceptConnection(
+                    endpointId, onPayLoadRecieved: _onPayLoadReceived);
+              },
+              onConnectionResult: (endpointId, status) async {
+                if (status == Status.CONNECTED) {
+                  // We have successfully connected to an endpoint
+                  // Thus we need to disable discovery and re-enable advertising
+                  LOG.i("Connected: ${endpointId}, ${idNameMap[endpointId]}");
+                  await stopDiscovery();
 
-                // Advertising is restarted below: (degenerate case)
-              } else {
-                // If we have failed to connect, then remove the endpoint
-                // entry
-                LOG.w(
-                    "Failed to connect: ${endpointId}, ${idNameMap[endpointId]}");
-                idNameMap.remove(endpointId);
-              }
+                  // Advertising is restarted below: (degenerate case)
+                } else {
+                  // If we have failed to connect, then remove the endpoint
+                  // entry
+                  LOG.w(
+                      "Failed to connect: ${endpointId}, ${idNameMap[endpointId]}");
+                  idNameMap.remove(endpointId);
+                }
 
-              // We have failed to connect (or we have connected).
-              // Either way, we must enable advertising
-              await startAdvertising();
-            },
-            onDisconnected: _onDisconnected,
-          );
+                // We have failed to connect (or we have connected).
+                // Either way, we must enable advertising
+                await startAdvertising();
+              },
+              onDisconnected: _onDisconnected,
+            );
+          } on PlatformException catch (e) {
+            LOG.e("Request Connection: ${e.toString()}");
+          }
         },
         onEndpointLost: _onDisconnected,
       );
