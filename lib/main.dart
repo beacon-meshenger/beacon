@@ -6,13 +6,44 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'avatar.dart';
 import 'centered_scrollable.dart';
+import 'mesh_client.dart';
 import 'messages.dart';
+import 'messenger_client.dart';
 import 'store.dart';
+
+MessengerClient messenger;
 
 void main() async {
   // TODO: name field in messages for updating names
   WidgetsFlutterBinding.ensureInitialized();
   final store = await Store.createStore();
+
+  // Added by Mikel
+  void onMessageReceived(DMMessage msg) async {
+    print(msg.toString());
+    if (msg.type == "MsgAck") {
+      // TODO: Handle sent/delivered
+    } else {
+      await store.handleMessage(Message(id: msg.uuid, timestamp: DateTime.now(), fromId: msg.srcName, toId: msg.dstName, data: msg.contents));
+    }
+
+    //     id: "message_${i}_2",
+    //     timestamp: DateTime.now().add(Duration(seconds: i)),
+    //     fromId: "User$i",
+    //     toId: "UserMe",
+    //     data: "Second Message from $i",
+    //   )
+  }
+
+  String id = "uMIKEL";
+  // String nickname;
+  // TODO: there must be a nicer way of doing this
+  // store.name().single.then((String s) {nickname = s;});
+  final MeshClient client = MeshClient(id);
+  messenger = MessengerClient(id, "MyNickName", client);
+  print("Set up messenger");
+
+  messenger.registerOnMessageReceivedCallback(onMessageReceived);
 
   // for (int i = 0; i < 5; i++) {
   //   await store.handleMessage(Message(
@@ -71,6 +102,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+
   @override
   Widget build(BuildContext context) {
     final store = Store.of(context);
@@ -230,6 +262,9 @@ class _ChatPageState extends State<ChatPage> {
           currentUserId: "UserMe", // TODO: dynamic from store probably
           messages: _messages,
           onMessageSend: (newMessage) {
+            // TODO: Send the message, and also store it
+            messenger.sendDirectTextMessage(widget.channelId, newMessage);
+
             store.handleMessage(Message(
               id: DateTime.now().toString(),
               // TODO: use uuid instead
