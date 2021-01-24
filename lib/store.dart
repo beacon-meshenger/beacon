@@ -249,9 +249,11 @@ WHERE m2.timestamp IS NULL;""");
         msg.contents,
       );
     } else if (msg.type == "DMKey") {
+      var unencrypted = rsaDecrypt(parsePrivateKeyFromPem(prefs.getString('privateKey')), utf8.encode(msg.contents));
+
       final decoder = new JsonDecoder();
 
-      var decode = decoder.convert(msg.contents);
+      var decode = decoder.convert(utf8.decode(unencrypted));
 
       String key = decode['publicKey'];
       String name = decode['name'];
