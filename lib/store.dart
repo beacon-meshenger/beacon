@@ -272,6 +272,8 @@ WHERE m2.timestamp IS NULL;""");
         ),
         msg.contents,
       );
+    } else if (msg.type == "DMKeyAck") {
+      
     } else if (msg.type == "DMKey") {
       var unencrypted = rsaDecrypt(parsePrivateKeyFromPem(prefs.getString('privateKey')), base64.decode(msg.contents));
 
