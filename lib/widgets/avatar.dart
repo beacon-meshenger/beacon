@@ -4,6 +4,17 @@ const _avatarTextStyle = TextStyle(color: Colors.white);
 
 
 
+const avatarColors = [
+  Colors.deepOrange,
+  Colors.amber,
+  Colors.blueAccent,
+  Colors.cyanAccent,
+  Colors.deepPurple,
+  Colors.greenAccent,
+  Colors.pinkAccent,
+  Colors.tealAccent,
+];
+
 class Avatar extends StatelessWidget {
   final String user;
   final Color color;
