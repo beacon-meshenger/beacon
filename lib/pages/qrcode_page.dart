@@ -108,9 +108,9 @@ class _QRCodePageState extends State<QRCodePage> {
                 print(decodedScanval['name']);
                 print(decodedScanval['publicKey']);
 
-                if (decodedScanval['name'] && decodedScanval['publicKey']) {
+                if (decodedScanval['name'].toString().isNotEmpty && decodedScanval['publicKey'].toString().isNotEmpty) {
                   // save name
-                  await store.prefs.setStringList('user:${userIdFromPublicKey(decodedScanval['publicKey'])}', decodedScanval['name']);
+                  await store.prefs.setString('user:${userIdFromPublicKey(decodedScanval['publicKey'])}', decodedScanval['name']);
 
                   var keys = store.prefs.getStringList('keys');
                   if (keys == null) keys = [];
