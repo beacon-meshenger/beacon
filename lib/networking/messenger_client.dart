@@ -166,9 +166,9 @@ class MessengerClient {
   }
 
   // Sends our public key to someone else, encrypted by their public key, so it can't be modified.
-  String sendKey(String dstName, RSAPublicKey scannedPublicKey, String ourPublicKey) {
+  String sendKey(String dstName, RSAPublicKey scannedPublicKey, String ourPublicData) {
     String uuid = UUID.v4();
-    Uint8List encryptedMessage = rsaEncrypt(scannedPublicKey, utf8.encode(ourPublicKey));
+    Uint8List encryptedMessage = rsaEncrypt(scannedPublicKey, utf8.encode(ourPublicData));
     // send(message)
     Uint8List payload = new DMMessage(uuid, clientName, dstName, clientNickname, "DMKey", utf8.decode(encryptedMessage)).encode();
 
