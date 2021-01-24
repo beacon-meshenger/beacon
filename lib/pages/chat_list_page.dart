@@ -29,7 +29,7 @@ class ChatListPage extends StatelessWidget {
                 title: Text(nameForChannelId(store.prefs, list[i].key)),
                 subtitle: last == null
                     ? null
-                    : Text(last.startsWith("geo:") ? "Shared Location" : last),
+                    : Text(last.startsWith("geo:") ? "🌍 Shared Location" : last),
                 onTap: () {
                   Navigator.push(context, new MaterialPageRoute(
                     builder: (context) {
