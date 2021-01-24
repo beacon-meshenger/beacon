@@ -52,6 +52,7 @@ class _ChatPageState extends State<ChatPage> {
         child: _MessageList(
           currentUserId: store.currentId,
           messages: _messages,
+          channelId: widget.channelId,
           onMessageSend: (newMessage) {
             store.sendMessage(widget.channelId, newMessage);
           },
@@ -80,12 +81,14 @@ class _Message extends StatelessWidget {
   final String currentUserId;
   final Message message;
   final Message nextMessage;
+  final bool showFullName;
 
   _Message({
     Key key,
     @required this.currentUserId,
     @required this.message,
     this.nextMessage,
+    this.showFullName = false,
   }) : super(key: key);
 
   Future<void> _launchMessage() async {
@@ -107,6 +110,7 @@ class _Message extends StatelessWidget {
                 Duration(minutes: 1));
 
     final isLocation = message.data.startsWith("geo:");
+    final fromName = message.fromName(store.prefs);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -116,7 +120,7 @@ class _Message extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 18.0),
               child: Avatar(
-                user: message.fromName(store.prefs)[0],
+                user: fromName[0],
                 color: theme.accentColor,
               ),
             )
@@ -164,6 +168,7 @@ class _Message extends StatelessWidget {
                 ),
                 if (endOfThread)
                   Text(
+                (showFullName ? "$fromName, " : "") +
                     _dateFormat.format(message.timestamp) +
                         (received
                             ? ""
@@ -184,12 +189,14 @@ class _Message extends StatelessWidget {
 class _MessageList extends StatefulWidget {
   final String currentUserId;
   final List<Message> messages;
+  final String channelId;
   final ValueChanged<String> onMessageSend;
 
   const _MessageList({
     Key key,
     @required this.currentUserId,
     @required this.messages,
+    @required this.channelId,
     this.onMessageSend,
   }) : super(key: key);
 
@@ -243,6 +250,7 @@ class _MessageListState extends State<_MessageList> {
                 currentUserId: widget.currentUserId,
                 message: widget.messages[i],
                 nextMessage: i > 0 ? widget.messages[i - 1] : null,
+                showFullName: widget.channelId.isEmpty,
               );
             },
             padding: const EdgeInsets.all(8.0),
