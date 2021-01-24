@@ -19,8 +19,6 @@ void main() async {
 
   // Check if key pair exists, if not create
   SharedPreferences _prefs = await SharedPreferences.getInstance();
-  _prefs.setString('publicKey', null);
-  _prefs.setString('privateKey', null);
 
   if (!_prefs.containsKey('publicKey') && !_prefs.containsKey('privateKey')) {
     // Generate keys

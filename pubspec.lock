@@ -105,12 +105,12 @@ packages:
     source: hosted
     version: "1.0.11"
   flutter_svg:
-      dependency: "direct main"
-      description:
-        name: flutter_svg
-        url: "https://pub.dartlang.org"
-      source: hosted
-      version: "0.19.1"
+    dependency: "direct main"
+    description:
+      name: flutter_svg
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.19.1"
   flutter_test:
     dependency: "direct dev"
     description: flutter
