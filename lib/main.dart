@@ -40,6 +40,7 @@ class ChatApp extends StatelessWidget {
       store: store,
       child: MaterialApp(
         title: "Beacon",
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           brightness: Brightness.dark,
           // primarySwatch: Colors.deepOrange,

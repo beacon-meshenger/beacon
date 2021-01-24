@@ -23,7 +23,7 @@ class ChatListPage extends StatelessWidget {
                 size: 40.0,
               ),
               title: Text(nameForChannelId(store.prefs, list[i].key)),
-              subtitle: Text(list[i].value),
+              subtitle: list[i].value == null ? null : Text(list[i].value),
               onTap: () {
                 Navigator.push(context, new MaterialPageRoute(
                   builder: (context) {

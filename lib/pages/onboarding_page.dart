@@ -1,8 +1,8 @@
 import 'dart:math';
 
 import 'package:chat/widgets/centered_scrollable.dart';
+import 'package:chat/widgets/logo.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class OnboardingPage extends StatefulWidget {
   final ValueChanged<String> nameCallback;
@@ -36,11 +36,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     final logoSize = min(size.width, size.height) / 2;
     return CenteredScrollable(
       children: [
-        SvgPicture.asset(
-          "assets/logo.svg",
-          width: logoSize,
-          height: logoSize,
-        ),
+        AnimatedLogo(size: logoSize),
         ConstrainedBox(
           constraints: BoxConstraints(maxWidth: logoSize),
           child: Text(
@@ -57,9 +53,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         RaisedButton(
           onPressed: _controller.text.isEmpty
               ? null
-              : () {
-                  widget.nameCallback(_controller.text);
-                },
+              : () => widget.nameCallback(_controller.text),
           child: Text("Let's go!"),
         ),
       ],

@@ -159,6 +159,7 @@ WHERE m2.timestamp IS NULL;""");
       key: (map) => map["channelId"],
       value: (map) => map["data"],
     );
+    initialChannels.putIfAbsent("", () => null);
 
     // Initialise key pair
     // Check if key pair exists, if not create
@@ -180,6 +181,12 @@ WHERE m2.timestamp IS NULL;""");
         : "";
 
     print("ID: $currentId Name: $currentName");
+
+    // await prefs.setString(_kPrefUserNamePrefix + "User0", "Alice");
+    // await prefs.setString(_kPrefUserNamePrefix + "User1", "Bob");
+    // await prefs.setString(_kPrefUserNamePrefix + "User2", "Charlie");
+    // await prefs.setString(_kPrefUserNamePrefix + "User3", "Daisy");
+    // await prefs.setString(_kPrefUserNamePrefix + "User4", "Jenifer");
 
     return Store._(
       db: db,
