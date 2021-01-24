@@ -155,6 +155,7 @@ WHERE m2.timestamp IS NULL;""");
       key: (map) => map["channelId"],
       value: (map) => map["data"],
     );
+    initialChannels.putIfAbsent("", () => null);
 
     // Initialise key pair
     // Check if key pair exists, if not create
@@ -215,7 +216,7 @@ WHERE m2.timestamp IS NULL;""");
             BehaviorSubject.seeded(UnmodifiableMapView(channels)),
         _messageCallbacks = {},
         _currentNameSubject = BehaviorSubject.seeded(currentName),
-        _connectedDevicesSubject = BehaviorSubject<int>.seeded(3) {
+        _connectedDevicesSubject = BehaviorSubject<int>.seeded(null) {
     _mesh = MeshClient(currentId, _onConnectedDevicesChanged);
     _messenger = MessengerClient(currentId, currentName, _mesh);
     print("Set up messenger");
