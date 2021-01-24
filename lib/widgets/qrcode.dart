@@ -12,8 +12,6 @@ class QRCode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-
     return FractionallySizedBox(
       widthFactor: 0.7,
       child: QrImage(

@@ -1,8 +1,61 @@
+import 'dart:async';
+
+import 'package:chat/widgets/avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import 'avatar.dart';
-import 'store.dart';
+import '../store.dart';
+
+class ChatPage extends StatefulWidget {
+  final String channelId;
+
+  const ChatPage({Key key, this.channelId}) : super(key: key);
+
+  @override
+  _ChatPageState createState() => _ChatPageState();
+}
+
+class _ChatPageState extends State<ChatPage> {
+  List<Message> _messages = [];
+  StreamSubscription<List<Message>> _subscription;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_subscription == null) {
+      _subscription = Store.of(context).messages(widget.channelId).listen(
+        (messages) {
+          setState(() => _messages = messages);
+        },
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = Store.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Beacon"),
+      ),
+      body: SafeArea(
+        child: _MessageList(
+          currentUserId: store.currentId,
+          messages: _messages,
+          onMessageSend: (newMessage) {
+            store.sendMessage(widget.channelId, newMessage);
+          },
+        ),
+      ),
+    );
+  }
+}
 
 final _dateFormat = DateFormat("HH:mm, MMM d");
 
@@ -59,7 +112,7 @@ class _Message extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment:
-                  received ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+              received ? CrossAxisAlignment.start : CrossAxisAlignment.end,
               children: [
                 Container(
                   // margin: const EdgeInsets.symmetric(vertical: 4.0),
@@ -67,8 +120,8 @@ class _Message extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: received
                         ? (theme.brightness == Brightness.light
-                            ? Colors.grey[200]
-                            : Colors.grey[800])
+                        ? Colors.grey[200]
+                        : Colors.grey[800])
                         : theme.accentColor,
                     borderRadius: received ? _receivedRadius : _sentRadius,
                   ),
@@ -99,12 +152,12 @@ class _Message extends StatelessWidget {
   }
 }
 
-class MessageList extends StatefulWidget {
+class _MessageList extends StatefulWidget {
   final String currentUserId;
   final List<Message> messages;
   final ValueChanged<String> onMessageSend;
 
-  const MessageList({
+  const _MessageList({
     Key key,
     @required this.currentUserId,
     @required this.messages,
@@ -115,7 +168,7 @@ class MessageList extends StatefulWidget {
   _MessageListState createState() => _MessageListState();
 }
 
-class _MessageListState extends State<MessageList> {
+class _MessageListState extends State<_MessageList> {
   TextEditingController _controller;
 
   @override
@@ -209,3 +262,4 @@ class _MessageListState extends State<MessageList> {
     );
   }
 }
+
