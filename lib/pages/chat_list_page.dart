@@ -16,11 +16,12 @@ class ChatListPage extends StatelessWidget {
         final list = snapshot.data.entries.toList();
         return ListView.builder(
           itemBuilder: (context, i) {
+            final channelId = list[i].key;
             final last = list[i].value;
             return ListTile(
               leading: Avatar(
-                user: list[i].key == "" ? "📢" : list[i].key[0],
-                color: list[i].key == "" ? theme.cardColor : theme.accentColor,
+                user: channelId == "" ? "📢" : nameForChannelId(store.prefs, channelId)[0],
+                color: channelId == "" ? theme.cardColor : theme.accentColor,
                 size: 40.0,
               ),
               title: Text(nameForChannelId(store.prefs, list[i].key)),
