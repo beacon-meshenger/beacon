@@ -250,6 +250,9 @@ WHERE m2.timestamp IS NULL;""");
         msg.contents,
       );
     } else {
+      // if (msg.type == "BroadcastText") {
+      await prefs.setString("user:${msg.srcName}", msg.srcNickname);
+      // }
       await handleMessage(Message(
         id: msg.uuid,
         timestamp: DateTime.now(),
