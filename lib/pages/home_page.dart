@@ -17,32 +17,32 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final store = Store.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Beacon"),
-        bottom: Status(),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.qr_code),
-            tooltip: "Add Users",
-            onPressed: () {
-              Navigator.push(context, new MaterialPageRoute(builder: (context) {
-                return QRCodePage();
-              }));
-            },
-          )
-        ],
-      ),
-      body: StreamBuilder<String>(
+    return StreamBuilder<String>(
         stream: store.name(),
         builder: (context, snapshot) {
-          if (snapshot.hasData && snapshot.data.isNotEmpty) {
-            return ChatListPage();
-          } else {
-            return OnboardingPage(nameCallback: store.handleNameChange);
-          }
-        },
-      ),
-    );
+          final hasName = snapshot.hasData && snapshot.data.isNotEmpty;
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text("Beacon"),
+              bottom: Status(),
+              actions: [
+                if (hasName)
+                  IconButton(
+                    icon: Icon(Icons.qr_code),
+                    tooltip: "Add Users",
+                    onPressed: () {
+                      Navigator.push(context,
+                          new MaterialPageRoute(builder: (context) {
+                        return QRCodePage();
+                      }));
+                    },
+                  )
+              ],
+            ),
+            body: hasName
+                ? ChatListPage()
+                : OnboardingPage(nameCallback: store.handleNameChange),
+          );
+        });
   }
 }
