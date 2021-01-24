@@ -16,7 +16,7 @@ class _QRCodePageState extends State<QRCodePage> {
   String scanned;
   String data;
   String addedUser;
-  GlobalKey<ScaffoldState> scaffoldState;
+  GlobalKey<ScaffoldState> scaffoldState = GlobalKey();
 
   @override
   void initState() {
@@ -131,7 +131,11 @@ class _QRCodePageState extends State<QRCodePage> {
 
 
                 // Successfully added
-                // scaffoldState.currentState.showSnackBar(new SnackBar(content: new Text(decodedScanval['name'])));
+                scaffoldState.currentState.showSnackBar(new SnackBar(
+                    content: new Text(
+                        'Established contact with ${decodedScanval['name']}!'
+                    )
+                ));
               },
 
               tooltip: 'Add user',
