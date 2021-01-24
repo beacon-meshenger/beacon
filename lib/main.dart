@@ -1,12 +1,31 @@
 import "package:flutter/material.dart";
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'avatar.dart';
+import 'crypto.dart';
 import 'messages.dart';
+import 'qrcode.dart';
 import 'store.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final store = await Store.createStore();
+
+  // Check if key pair exists, if not create
+  SharedPreferences _prefs = await SharedPreferences.getInstance();
+  _prefs.setString('publicKey', null);
+  _prefs.setString('privateKey', null);
+
+  if (!_prefs.containsKey('publicKey') && !_prefs.containsKey('privateKey')) {
+    // Generate keys
+    var keyPair = generateRSAkeyPair();
+
+    var publicKeyBase64 = encodePublicKeyToPem(keyPair.publicKey);
+    var privateKeyBase64 = encodePrivateKeyToPem(keyPair.privateKey);
+
+    _prefs.setString('publicKey', publicKeyBase64);
+    _prefs.setString('privateKey', privateKeyBase64);
+  }
 
   // for (int i = 0; i < 5; i++) {
   //   await store.handleMessage(Message(
@@ -70,6 +89,13 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Beacon"),
+        actions: [
+          IconButton(icon: Icon(Icons.qr_code), onPressed: () {
+            Navigator.push(context, new MaterialPageRoute(builder: (context) {
+              return new QRCodePage();
+            }));
+          })
+        ]
       ),
       body: ListView.builder(
         itemBuilder: (context, i) {
@@ -135,6 +161,69 @@ class _ChatPageState extends State<ChatPage> {
           messages: _messages,
           onMessageSend: _send,
         ),
+      ),
+    );
+  }
+}
+
+class QRCodePage extends StatefulWidget {
+
+  @override
+  _QRCodePageState createState() => _QRCodePageState();
+}
+
+class _QRCodePageState extends State<QRCodePage> {
+  String publicKey;
+  String scanned;
+
+  @override
+  void initState() {
+    super.initState();
+    _getPublicKey();
+
+    scanned = '';
+  }
+
+  Future _getPublicKey () async {
+    SharedPreferences _prefs = await SharedPreferences.getInstance();
+    setState(() {
+      publicKey = _prefs.getString('publicKey');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Beacon"),
+      ),
+      body: SafeArea(
+        child: Center (
+          child: Column (
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [QRCode(
+            publicKey: publicKey,
+            ),
+          ]
+          )
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          String scanVal = await qrScan(theme.accentColor);
+          SharedPreferences _prefs = await SharedPreferences.getInstance();
+          var keys = _prefs.getStringList('keys');
+          if ( keys == null ) keys = [];
+          if (!keys.contains(scanVal)) {
+            keys.add(scanVal);
+            _prefs.setStringList('keys', keys);
+          }
+        },
+        tooltip: 'Add user',
+        child: const Icon(Icons.qr_code_scanner)
       ),
     );
   }
