@@ -1,3 +1,12 @@
+// class BiMap {
+//
+//   static Map<V, K> inverse<K, V>(Map<K, V> m) {
+//     m.map((k, v) => MapEntry(v, k));
+//   }
+//
+// }
+
+
 class BiMap<K, V> implements Map<K, V> {
    Map<K, V> _mapForward = new Map<K, V>();
    Map<V, K> _mapInverse = new Map<V, K>();
@@ -13,8 +22,14 @@ class BiMap<K, V> implements Map<K, V> {
 
   @override
   void operator []=(K key, V value) {
-    _mapForward[key] = value;
-    _mapInverse[value] = key;
+     if (_mapForward.containsValue(key)) {
+       V value = _mapForward[key];
+       _mapInverse.remove(value);
+       _mapForward.remove(key);
+     }
+
+     _mapForward[key] = value;
+     _mapInverse[value] = key;
   }
 
   @override

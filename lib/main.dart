@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:ble_app/mesh_client.dart';
+import 'package:ble_app/messenger_client.dart';
 import 'package:flutter/material.dart';
 
 import 'dart:math';
@@ -42,26 +43,41 @@ class Body extends StatefulWidget {
 
 class _BodyState extends State<Body> {
 
+
+  TextEditingController _clientController;
+  TextEditingController _messageController;
+
   static String getRandString(int len) {
     var random = Random.secure();
     var values = List<int>.generate(len, (i) =>  random.nextInt(255));
     return "u" + base64UrlEncode(values);
   }
 
-  void _onPayloadReceived(Uint8List payload) {
-    String str = String.fromCharCodes(payload);
-    notify(str);
+  void onMessageReceived(Message message) {
+
+    notify("Message ${ message.toJson().toString() }");
   }
 
-  final Strategy strategy = Strategy.P2P_CLUSTER;
   final String id = getRandString(2);
+  final String nickname = "Pizza";
 
   MeshClient client;
+  MessengerClient messenger;
+
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    client = MeshClient(id, _onPayloadReceived);
+    client = MeshClient(id);
+    messenger = MessengerClient(id, nickname, client);
+
+    messenger.registerOnMessageReceivedCallback(onMessageReceived);
+
+    _messageController = TextEditingController();
+    _messageController.addListener(() => setState(() {}));
+    _clientController = TextEditingController();
+    _clientController.addListener(() => setState(() {}));
+
   }
 
   void notify(Object obj) {
@@ -254,12 +270,25 @@ class _BodyState extends State<Body> {
             Text(
               "Sending Data",
             ),
+            TextField(
+              controller: _messageController,
+              keyboardType: TextInputType.multiline,
+              maxLines: null,
+            ),
+            TextField(
+              controller: _clientController,
+              keyboardType: TextInputType.multiline,
+              maxLines: null,
+            ),
             RaisedButton(
-              child: Text("Broadcast Random Bytes Payload"),
+              child: Text("Send"),
               onPressed: () async {
-                String a = Random().nextInt(100).toString();
-                notify("Broadcasting $a");
-                client.broadcastPayload(Uint8List.fromList(a.codeUnits));
+                if (_messageController.text.isNotEmpty && _clientController.text.isNotEmpty) {
+                  messenger.sendDirectTextMessage(_clientController.text, _messageController.text);
+                  notify("Message sent.");
+                } else {
+                  notify("Failed to send message ${_messageController.text} to ${_clientController.text}.");
+                }
               },
             ),
           ],
