@@ -210,7 +210,7 @@ WHERE m2.timestamp IS NULL;""");
   final BehaviorSubject<String> _currentNameSubject;
   final BehaviorSubject<int> _connectedDevicesSubject;
 
-  MeshClient _mesh;
+  MeshClient mesh;
   MessengerClient messenger;
 
   Store._({
@@ -225,9 +225,9 @@ WHERE m2.timestamp IS NULL;""");
         _messageCallbacks = {},
         _currentNameSubject = BehaviorSubject.seeded(currentName),
         _connectedDevicesSubject = BehaviorSubject<int>.seeded(null) {
-    _mesh = MeshClient(currentId, _onConnectedDevicesChanged);
-    _mesh.initialise().then((_) => _mesh.start());
-    messenger = MessengerClient(currentId, currentName, _mesh);
+    mesh = MeshClient(currentId, _onConnectedDevicesChanged);
+    mesh.initialise().then((_) => mesh.start());
+    messenger = MessengerClient(currentId, currentName, mesh);
     print("Set up messenger");
 
     messenger.registerOnMessageReceivedCallback(_onMessageReceived);
