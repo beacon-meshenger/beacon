@@ -59,7 +59,8 @@ class MessengerClient {
 
   static final Uuid UUID = Uuid();
 
-  final String clientName, clientNickname;
+  final String clientName;
+  String clientNickname;
   final MeshClient meshClient;
 
   final List<OnMessageReceived> onMessageReceivedCallbacks = new List<OnMessageReceived>();
@@ -138,22 +139,27 @@ class MessengerClient {
   }
 
   // Send a text message to another user "dst"
-  void sendDirectTextMessage(String dstName, String contents) {
+  String sendDirectTextMessage(String dstName, String contents) {
     String uuid = UUID.v4();
 
+    // TODO: include timestamp in this message
     Uint8List payload = new DMMessage(uuid, clientName, dstName, clientNickname, "DMText", contents).encode();
     //
     // buildMessage(this.clientName, this.clientNickname, dst, "DMText", messageContents, messageUUID);
     onReceivePayload(payload, clientName);
+
+    return uuid;
   }
 
-  void sendDirectAck(String dstName, String originalUUID) {
+  String sendDirectAck(String dstName, String originalUUID) {
     String uuid = UUID.v4();
 
     Uint8List payload = new DMMessage(uuid, clientName, dstName, clientNickname, "DMAck", originalUUID).encode();
     //
     // buildMessage(this.clientName, this.clientNickname, dst, "DMText", messageContents, messageUUID);
     onReceivePayload(payload, clientName);
+
+    return uuid;
   }
 
   // TODO: Sending delivery/read receipts

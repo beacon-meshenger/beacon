@@ -7,63 +7,13 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'avatar.dart';
 import 'centered_scrollable.dart';
-import 'crypto.dart';
 import 'messages.dart';
-import 'mesh_client.dart';
-import 'messages.dart';
-import 'messenger_client.dart';
 import 'qrcode.dart';
 import 'store.dart';
 
-MessengerClient messenger;
-
 void main() async {
-  // TODO: name field in messages for updating names
   WidgetsFlutterBinding.ensureInitialized();
   final store = await Store.createStore();
-
-
-  // Check if key pair exists, if not create
-  SharedPreferences _prefs = await SharedPreferences.getInstance();
-
-  if (!_prefs.containsKey('publicKey') && !_prefs.containsKey('privateKey')) {
-    // Generate keys
-    var keyPair = generateRSAkeyPair();
-
-    var publicKeyBase64 = encodePublicKeyToPem(keyPair.publicKey);
-    var privateKeyBase64 = encodePrivateKeyToPem(keyPair.privateKey);
-
-    _prefs.setString('publicKey', publicKeyBase64);
-    _prefs.setString('privateKey', privateKeyBase64);
-  }
-
-  // Added by Mikel
-  void onMessageReceived(DMMessage msg) async {
-    print(msg.toString());
-    if (msg.type == "MsgAck") {
-      // TODO: Handle sent/delivered
-    } else {
-      await store.handleMessage(Message(id: msg.uuid, timestamp: DateTime.now(), fromId: msg.srcName, toId: msg.dstName, data: msg.contents));
-    }
-
-    //     id: "message_${i}_2",
-    //     timestamp: DateTime.now().add(Duration(seconds: i)),
-    //     fromId: "User$i",
-    //     toId: "UserMe",
-    //     data: "Second Message from $i",
-    //   )
-  }
-
-  String id = "uMIKEL";
-  // String nickname;
-  // TODO: there must be a nicer way of doing this
-  // store.name().single.then((String s) {nickname = s;});
-  final MeshClient client = MeshClient(id);
-  messenger = MessengerClient(id, "MyNickName", client);
-  print("Set up messenger");
-
-  messenger.registerOnMessageReceivedCallback(onMessageReceived);
-
 
   // for (int i = 0; i < 5; i++) {
   //   await store.handleMessage(Message(
@@ -90,7 +40,6 @@ class ChatApp extends StatelessWidget {
 
   const ChatApp({Key key, this.store}) : super(key: key);
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return StoreProvider(
@@ -116,7 +65,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-
   @override
   Widget build(BuildContext context) {
     final store = Store.of(context);
@@ -286,17 +234,7 @@ class _ChatPageState extends State<ChatPage> {
           currentUserId: store.currentId,
           messages: _messages,
           onMessageSend: (newMessage) {
-            // TODO: Send the message, and also store it
-            messenger.sendDirectTextMessage(widget.channelId, newMessage);
-
-            store.handleMessage(Message(
-              id: DateTime.now().toString(),
-              // TODO: use uuid instead
-              timestamp: DateTime.now(),
-              fromId: "UserMe",
-              toId: widget.channelId,
-              data: newMessage,
-            ));
+            store.sendMessage(widget.channelId, newMessage);
           },
         ),
       ),
@@ -305,7 +243,6 @@ class _ChatPageState extends State<ChatPage> {
 }
 
 class QRCodePage extends StatefulWidget {
-
   @override
   _QRCodePageState createState() => _QRCodePageState();
 }

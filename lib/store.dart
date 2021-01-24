@@ -1,11 +1,15 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:chat/mesh_client.dart';
 import 'package:path/path.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rxdart/rxdart.dart';
+
+import 'crypto.dart';
+import 'messenger_client.dart';
 
 class StoreProvider extends InheritedWidget {
   final Store store;
@@ -147,7 +151,18 @@ WHERE m2.timestamp IS NULL;""");
       value: (map) => map["data"],
     );
 
-    // TODO: maybe move key init to here to?
+    // Initialise key pair
+    // Check if key pair exists, if not create
+    if (!prefs.containsKey('publicKey') && !prefs.containsKey('privateKey')) {
+      // Generate keys
+      var keyPair = generateRSAkeyPair();
+
+      var publicKeyBase64 = encodePublicKeyToPem(keyPair.publicKey);
+      var privateKeyBase64 = encodePrivateKeyToPem(keyPair.privateKey);
+
+      prefs.setString('publicKey', publicKeyBase64);
+      prefs.setString('privateKey', privateKeyBase64);
+    }
 
     final currentId = "UserMe"; // TODO: dynamic (store with `_kPrefCurrentId`)
     final currentName = prefs.containsKey(_kPrefCurrentName) ? prefs.getString(_kPrefCurrentName) : "";
@@ -170,6 +185,9 @@ WHERE m2.timestamp IS NULL;""");
   final String currentId;
   final BehaviorSubject<String> _currentNameSubject;
 
+  MeshClient _mesh;
+  MessengerClient _messenger;
+
   Store._({
     @required this.db,
     @required this.prefs,
@@ -180,9 +198,28 @@ WHERE m2.timestamp IS NULL;""");
         _channelsSubject =
             BehaviorSubject.seeded(UnmodifiableMapView(channels)),
         _newMessageCallbacks = {},
-        _currentId = currentId,
-        _currentName = currentName,
-        _currentNameSubject = BehaviorSubject.seeded(currentName);
+        _currentNameSubject = BehaviorSubject.seeded(currentName) {
+    _mesh = MeshClient(currentId);
+    _messenger = MessengerClient(currentId, currentName, _mesh);
+    print("Set up messenger");
+
+    _messenger.registerOnMessageReceivedCallback(onMessageReceived);
+  }
+
+  Future<void> onMessageReceived(DMMessage msg) async {
+    print(msg.toString());
+    if (msg.type == "MsgAck") {
+      // TODO: Handle sent/delivered
+    } else {
+      await handleMessage(Message(
+        id: msg.uuid,
+        timestamp: DateTime.now(),
+        fromId: msg.srcName,
+        toId: msg.dstName,
+        data: msg.contents,
+      ));
+    }
+  }
 
   Stream<Map<String, String>> channels() {
     print("[Store] Subscribing to all channels...");
@@ -220,6 +257,17 @@ WHERE m2.timestamp IS NULL;""");
     return _currentNameSubject.stream;
   }
 
+  Future<void> sendMessage(String channelId, String contents) async {
+    String id = _messenger.sendDirectTextMessage(channelId, contents);
+    await handleMessage(Message(
+      id: id,
+      timestamp: DateTime.now(),
+      fromId: currentId,
+      toId: channelId,
+      data: contents,
+    ));
+  }
+
   Future<void> handleMessage(Message message) async {
     final channelId = _channelId(
       fromId: message.fromId,
@@ -239,7 +287,7 @@ WHERE m2.timestamp IS NULL;""");
   }
 
   Future<void> handleNameChange(String name) async {
-    _currentName = name;
+    _messenger.clientNickname = name;
     _currentNameSubject.add(name);
     await prefs.setString(_kPrefCurrentName, name);
   }
