@@ -112,7 +112,7 @@ class _Message extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment:
-              received ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+                  received ? CrossAxisAlignment.start : CrossAxisAlignment.end,
               children: [
                 Container(
                   // margin: const EdgeInsets.symmetric(vertical: 4.0),
@@ -120,8 +120,8 @@ class _Message extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: received
                         ? (theme.brightness == Brightness.light
-                        ? Colors.grey[200]
-                        : Colors.grey[800])
+                            ? Colors.grey[200]
+                            : Colors.grey[800])
                         : theme.accentColor,
                     borderRadius: received ? _receivedRadius : _sentRadius,
                   ),
@@ -262,4 +262,3 @@ class _MessageListState extends State<_MessageList> {
     );
   }
 }
-

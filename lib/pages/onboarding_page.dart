@@ -58,8 +58,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
           onPressed: _controller.text.isEmpty
               ? null
               : () {
-            widget.nameCallback(_controller.text);
-          },
+                  widget.nameCallback(_controller.text);
+                },
           child: Text("Let's go!"),
         ),
       ],

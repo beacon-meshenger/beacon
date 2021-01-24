@@ -22,6 +22,7 @@ class _HomePageState extends State<HomePage> {
         actions: [
           IconButton(
             icon: Icon(Icons.qr_code),
+            tooltip: "Add Users",
             onPressed: () {
               Navigator.push(context, new MaterialPageRoute(builder: (context) {
                 return QRCodePage();

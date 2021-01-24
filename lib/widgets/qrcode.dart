@@ -5,10 +5,7 @@ import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 class QRCode extends StatelessWidget {
   final String publicKey;
 
-  QRCode({
-    Key key,
-    @required this.publicKey
-  }) : super(key: key);
+  QRCode({Key key, @required this.publicKey}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -28,18 +25,17 @@ class QRCode extends StatelessWidget {
             ),
           );
         },
-    )
+      ),
     );
   }
 }
 
-Future<String> qrScan (Color color) async {
+Future<String> qrScan(Color color) async {
   String barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
-    '#${(color.value & 0xFFFFFF)
-        .toRadixString(16).padLeft(6, '0').toUpperCase()}',
+    '#${(color.value & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}',
     "Cancel",
     false,
-    ScanMode.QR
+    ScanMode.QR,
   );
   return barcodeScanRes;
 }

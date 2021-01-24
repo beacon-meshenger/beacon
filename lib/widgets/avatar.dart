@@ -6,7 +6,11 @@ class Avatar extends StatelessWidget {
   final String user;
   final double size;
 
-  const Avatar({Key key, @required this.user, this.size = 32.0}) : super(key: key);
+  const Avatar({
+    Key key,
+    @required this.user,
+    this.size = 32.0,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
