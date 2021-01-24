@@ -3,16 +3,16 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 
 class QRCode extends StatelessWidget {
-  final String publicKey;
+  final String data;
 
-  QRCode({Key key, @required this.publicKey}) : super(key: key);
+  QRCode({Key key, @required this.data}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return FractionallySizedBox(
       widthFactor: 0.7,
       child: QrImage(
-        data: publicKey,
+        data: data,
         version: QrVersions.auto,
         backgroundColor: Colors.white,
         embeddedImage: AssetImage('assets/logoround.png'),
