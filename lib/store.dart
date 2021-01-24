@@ -249,7 +249,7 @@ WHERE m2.timestamp IS NULL;""");
         msg.contents,
       );
     } else if (msg.type == "DMKey") {
-      var unencrypted = rsaDecrypt(parsePrivateKeyFromPem(prefs.getString('privateKey')), utf8.encode(msg.contents));
+      var unencrypted = rsaDecrypt(parsePrivateKeyFromPem(prefs.getString('privateKey')), base64.decode(msg.contents));
 
       final decoder = new JsonDecoder();
 

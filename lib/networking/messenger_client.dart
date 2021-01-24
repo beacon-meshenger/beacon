@@ -174,7 +174,7 @@ class MessengerClient {
     String uuid = UUID.v4();
     Uint8List encryptedMessage = rsaEncrypt(scannedPublicKey, utf8.encode(ourPublicData));
     // send(message)
-    Uint8List payload = new DMMessage(uuid, clientName, dstName, clientNickname, "DMKey", utf8.decode(encryptedMessage)).encode();
+    Uint8List payload = new DMMessage(uuid, clientName, dstName, clientNickname, "DMKey", base64.encode(encryptedMessage)).encode();
 
     onPayLoadReceive(clientName, payload);
 
