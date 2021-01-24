@@ -112,12 +112,8 @@ class _QRCodePageState extends State<QRCodePage> {
                   // save name
                   await store.prefs.setString('user:${userIdFromPublicKey(decodedScanval['publicKey'])}', decodedScanval['name']);
 
-                  var keys = store.prefs.getStringList('keys');
-                  if (keys == null) keys = [];
-                  if (!keys.contains(decodedScanval['publicKey'])) {
-                    keys.add(decodedScanval['publicKey']);
-                    await store.prefs.setStringList('keys', keys);
-                  }
+                  await store.prefs.setString('key:${userIdFromPublicKey(decodedScanval['publicKey'])}', decodedScanval['publicKey']);
+
                 }
                 // TODO add send code
                 final encoder = new JsonEncoder();
@@ -132,8 +128,10 @@ class _QRCodePageState extends State<QRCodePage> {
                 );
 
 
+
+
                 // Successfully added
-                scaffoldState.currentState.showSnackBar(new SnackBar(content: new Text(decodedScanval['name'])));
+                // scaffoldState.currentState.showSnackBar(new SnackBar(content: new Text(decodedScanval['name'])));
               },
 
               tooltip: 'Add user',
