@@ -68,9 +68,11 @@ class _BodyState extends State<Body> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    client = MeshClient(id);
-    messenger = MessengerClient(id, nickname, client);
 
+    client = MeshClientSnake(id);
+    client.initialise().then((_) => client.start());
+
+    messenger = MessengerClient(id, nickname, client);
     messenger.registerOnMessageReceivedCallback(onMessageReceived);
 
     _messageController = TextEditingController();
@@ -156,11 +158,11 @@ class _BodyState extends State<Body> {
             Divider(),
             Text("Client Id: $id"),
             StreamBuilder<List<String>>(
-                stream: Stream.periodic(Duration(seconds: 1)).asyncMap((_) => client.getClientIds()),
+                stream: Stream.periodic(Duration(seconds: 1)).asyncMap((_) => client.getClientNames()),
                 initialData: [],
                 builder: (c, snapshot) => ListView(
                   shrinkWrap: true,
-                  children: <Widget>[ ...snapshot.data.map((d) => Text(d)).toList() ],
+                  children: snapshot.data?.map((d) => Text(d))?.toList() ?? <Widget>[ Text("Hello World") ],
                 )),
             Divider(),
             // Wrap(

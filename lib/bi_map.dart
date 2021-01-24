@@ -118,7 +118,7 @@ class BiMap<K, V> implements Map<K, V> {
 
   @override
   // TODO: implement values
-  Iterable<V> get values => _mapInverse.keys;
+  Iterable<V> get values => _mapForward.values;
 
   @override
   Map<K2, V2> map<K2, V2>(MapEntry<K2, V2> Function(K key, V value) f) {

@@ -71,7 +71,7 @@ class MessengerClient {
   // TODO: Add a remove callback method
 
   MessengerClient(this.clientName, this.clientNickname, this.meshClient) {
-    this.meshClient.registerOnPayloadReceivedCallback(onReceivePayload);
+    this.meshClient.registerOnPayLoadReceivedCallback(onPayLoadReceive);
   }
 
 
@@ -97,7 +97,7 @@ class MessengerClient {
   // }
 
   // Callback for blem.dart
-  void onReceivePayload(Uint8List encoded, String sendingClientName) {
+  void onPayLoadReceive(String sendingClientName, Uint8List encoded) {
     Message message = Message.decode(encoded);
 
     print("onReceivePayload: ${ message.toString() }");
@@ -113,7 +113,7 @@ class MessengerClient {
         callback(message);
       }
     } else {
-      if (meshClient.getClientIds().contains(message.dstName)) {
+      if (meshClient.getClientNames().contains(message.dstName)) {
         // We have a direct connection :) Forward the message
         // TODO: Fix race if client disconnects here
         meshClient.sendPayload(message.dstName, encoded);
@@ -125,7 +125,7 @@ class MessengerClient {
         forwardingHistory.add(message.uuid + sendingClientName);
 
         // Probably also a race here
-        for (String connectedClient in meshClient.getClientIds()) {
+        for (String connectedClient in meshClient.getClientNames()) {
           String forwardingPath = message.uuid + connectedClient;
           // Only forward if we've never forwarded this message to this person before
           if (!forwardingHistory.contains(forwardingPath)) {
@@ -144,7 +144,7 @@ class MessengerClient {
     Uint8List payload = new Message(uuid, clientName, dstName, clientNickname, "DMText", contents).encode();
     //
     // buildMessage(this.clientName, this.clientNickname, dst, "DMText", messageContents, messageUUID);
-    onReceivePayload(payload, clientName);
+    onPayLoadReceive(clientName, payload);
   }
 
   void sendDirectAck(String dstName, String originalUUID) {
@@ -153,7 +153,7 @@ class MessengerClient {
     Uint8List payload = new Message(uuid, clientName, dstName, clientNickname, "DMAck", originalUUID).encode();
     //
     // buildMessage(this.clientName, this.clientNickname, dst, "DMText", messageContents, messageUUID);
-    onReceivePayload(payload, clientName);
+    onPayLoadReceive(clientName, payload);
   }
 
   // TODO: Sending delivery/read receipts
