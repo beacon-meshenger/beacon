@@ -120,8 +120,6 @@ class MessengerClient {
         sendDirectAck(message.srcName, message.uuid);
       }
 
-
-
       for (OnMessageReceived callback in onMessageReceivedCallbacks) {
         callback(message);
       }
@@ -136,6 +134,7 @@ class MessengerClient {
 
       // If the message we're receiving is a broadcast, surface it to the user
       if (message.type == "BroadcastText") {
+        sendDirectAck(message.srcName, message.uuid);
         for (OnMessageReceived callback in onMessageReceivedCallbacks) {
           callback(message);
         }
