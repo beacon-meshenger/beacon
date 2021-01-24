@@ -120,8 +120,6 @@ class MessengerClient {
         sendDirectAck(message.srcName, message.uuid);
       }
 
-
-
       for (OnMessageReceived callback in onMessageReceivedCallbacks) {
         callback(message);
       }
@@ -136,6 +134,7 @@ class MessengerClient {
 
       // If the message we're receiving is a broadcast, surface it to the user
       if (message.type == "BroadcastText") {
+        sendDirectAck(message.srcName, message.uuid);
         for (OnMessageReceived callback in onMessageReceivedCallbacks) {
           callback(message);
         }
@@ -158,10 +157,12 @@ class MessengerClient {
   }
 
   // Send a text message to another user "dst"
-  String sendDirectTextMessage(String dstName, String contents) {
+  String sendDirectTextMessage(String dstName, String contents, RSAPublicKey recipientPublicKey) {
     String uuid = UUID.v4();
 
-    Uint8List payload = new DMMessage(uuid, clientName, dstName, clientNickname, "DMText", contents).encode();
+    Uint8List encryptedMessage = rsaEncrypt(recipientPublicKey, utf8.encode(contents));
+
+    Uint8List payload = new DMMessage(uuid, clientName, dstName, clientNickname, "DMText", base64.encode(encryptedMessage)).encode();
     onPayLoadReceive(clientName, payload);
 
     return uuid;
@@ -180,11 +181,11 @@ class MessengerClient {
 
   // Sends our public key to someone else, encrypted by their public key, so it can't be modified.
   String sendKey(String dstName, RSAPublicKey scannedPublicKey, String ourPublicData) {
-
+    print('Sending keys');
     String uuid = UUID.v4();
     Uint8List encryptedMessage = rsaEncrypt(scannedPublicKey, utf8.encode(ourPublicData));
     // send(message)
-    Uint8List payload = new DMMessage(uuid, clientName, dstName, clientNickname, "DMKey", utf8.decode(encryptedMessage)).encode();
+    Uint8List payload = new DMMessage(uuid, clientName, dstName, clientNickname, "DMKey", base64.encode(encryptedMessage)).encode();
 
     onPayLoadReceive(clientName, payload);
 

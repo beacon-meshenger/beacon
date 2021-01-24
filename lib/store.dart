@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:path/path.dart';
@@ -78,16 +79,13 @@ class Message {
   final String fromId;
   final String toId;
   final String data;
-  bool acknowledged;
 
-  Message({
-    @required this.id,
-    @required this.timestamp,
-    @required this.fromId,
-    @required this.toId,
-    @required this.data,
-    this.acknowledged = true,
-  });
+  Message(
+      {@required this.id,
+      @required this.timestamp,
+      @required this.fromId,
+      @required this.toId,
+      @required this.data});
 
   Map<String, dynamic> toMap({@required String currentId}) {
     return {
@@ -232,6 +230,8 @@ WHERE m2.timestamp IS NULL;""");
   final BehaviorSubject<String> _currentNameSubject;
   final BehaviorSubject<int> _connectedDevicesSubject;
 
+  final Set<String> unackedMessages;
+
   MeshClient mesh;
   MessengerClient messenger;
 
@@ -247,7 +247,8 @@ WHERE m2.timestamp IS NULL;""");
             BehaviorSubject.seeded(UnmodifiableMapView(channels)),
         _messageCallbacks = {},
         _currentNameSubject = BehaviorSubject.seeded(currentName),
-        _connectedDevicesSubject = BehaviorSubject<int>.seeded(null) {
+        _connectedDevicesSubject = BehaviorSubject<int>.seeded(null),
+        unackedMessages = Set<String>() {
     mesh = MeshClient(currentId, _onConnectedDevicesChanged);
     mesh.initialise().then((_) => mesh.start());
     messenger = MessengerClient(currentId, currentName, mesh);
@@ -271,10 +272,14 @@ WHERE m2.timestamp IS NULL;""");
         ),
         msg.contents,
       );
+    } else if (msg.type == "DMKeyAck") {
+      print('Keys receieved by recipient');
+      // Send message to create channel
+
+
+
     } else if (msg.type == "DMKey") {
-      var unencrypted = rsaDecrypt(
-          parsePrivateKeyFromPem(prefs.getString('privateKey')),
-          utf8.encode(msg.contents));
+      var unencrypted = rsaDecrypt(parsePrivateKeyFromPem(prefs.getString('privateKey')), base64.decode(msg.contents));
 
       final decoder = new JsonDecoder();
 
@@ -285,26 +290,32 @@ WHERE m2.timestamp IS NULL;""");
 
       await prefs.setString("user:${msg.srcName}", name);
 
-      var keys = prefs.getStringList('keys');
-      if (keys == null) keys = [];
-      if (!keys.contains(key)) {
-        keys.add(key);
-        await prefs.setStringList('keys', keys);
-      }
+      await prefs.setString("key:${msg.srcName}", key);
+
+      String displayName = prefs.getString('user:${msg.srcName}');
+
+      sendMessage(
+          msg.srcName,
+          'Hi $displayName!\nGlad to be connected on Beacon!'
+      );
+
     } else {
       // if (msg.type == "BroadcastText") {
       await prefs.setString("user:${msg.srcName}", msg.srcNickname);
       // }
+      Uint8List unencrypted = rsaDecrypt(parsePrivateKeyFromPem(prefs.getString('privateKey')), base64.decode(msg.contents));
+      String decoded = utf8.decode(unencrypted);
+
       await handleMessage(Message(
         id: msg.uuid,
         timestamp: DateTime.now(),
         fromId: msg.srcName,
         toId: msg.dstName,
-        data: msg.contents,
+        data: decoded,
       ));
 
       // Only show notification when it's not from us
-      if(msg.srcName != currentId) {
+      if (msg.srcName != currentId) {
         await notifications.show(
           0,
           nameForChannelId(prefs, msg.dstName),
@@ -335,9 +346,9 @@ WHERE m2.timestamp IS NULL;""");
       messages = maps.map((map) => Message.fromMap(map, prefs: prefs)).toList();
       controller.add(UnmodifiableListView(messages));
       _messageCallbacks[channelId] = (MapEntry<bool, Message> entry) {
-        final i =
-            messages.indexWhere((element) => element.id == entry.value.id);
         if (entry.key /*create*/) {
+          final i =
+              messages.indexWhere((element) => element.id == entry.value.id);
           // Make sure we haven't inserted this message before
           if (i == -1) {
             messages.insert(0, entry.value);
@@ -345,10 +356,6 @@ WHERE m2.timestamp IS NULL;""");
             print(
                 "[Store] Tried to insert message ${entry.value.id} again, ignoring...");
           }
-        } else
-        /*update*/ {
-          // The old thing we are allowed to update is acknowledged
-          messages[i].acknowledged = entry.value.acknowledged;
         }
         controller.add(UnmodifiableListView(messages));
       };
@@ -375,15 +382,16 @@ WHERE m2.timestamp IS NULL;""");
     if (channelId.isEmpty) {
       id = messenger.sendBroadcast(contents);
     } else {
-      id = messenger.sendDirectTextMessage(channelId, contents);
+      String key = prefs.getString('key:$channelId');
+      id = messenger.sendDirectTextMessage(channelId, contents, parsePublicKeyFromPem(key));
     }
+    unackedMessages.add(id);
     await handleMessage(Message(
       id: id,
       timestamp: DateTime.now(),
       fromId: currentId,
       toId: channelId,
       data: contents,
-      acknowledged: false,
     ));
   }
 
@@ -411,20 +419,12 @@ WHERE m2.timestamp IS NULL;""");
   }
 
   Future<void> acknowledgeMessage(String channelId, String messageId) async {
+    unackedMessages.remove(messageId);
     if (_messageCallbacks.containsKey(channelId)) {
       print(
           "[Store] Notifying \"$channelId\" callback about $messageId acknowledgement...");
       _messageCallbacks[channelId](MapEntry(
-        false /*update*/,
-        Message(
-          id: messageId,
-          acknowledged: true,
-          // These will be ignored in the update (this is pretty horrible, but it works)
-          timestamp: null,
-          fromId: null,
-          toId: null,
-          data: null,
-        ),
+        false /*update*/, null,
       ));
     }
 

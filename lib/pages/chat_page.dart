@@ -92,8 +92,9 @@ class _Message extends StatelessWidget {
   }) : super(key: key);
 
   Future<void> _launchMessage() async {
-    if(await canLaunch(message.data)) {
-      await launch(message.data);
+    final mapUrl = message.data.replaceFirst("geo:", "https://www.google.com/maps/search/?api=1&query=");
+    if(await canLaunch(mapUrl)) {
+      await launch(mapUrl);
     }
   }
 
@@ -111,6 +112,7 @@ class _Message extends StatelessWidget {
 
     final isLocation = message.data.startsWith("geo:");
     final fromName = message.fromName(store.prefs);
+    final unacked = store.unackedMessages.contains(message.id);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -136,7 +138,7 @@ class _Message extends StatelessWidget {
               children: [
                 AnimatedOpacity(
                   duration: const Duration(milliseconds: 500),
-                  opacity: !received && !message.acknowledged ? 0.5 : 1.0,
+                  opacity: !received && unacked ? 0.5 : 1.0,
                   child: GestureDetector(
                     onTap: isLocation ? _launchMessage : null,
                     child: Container(
@@ -173,7 +175,7 @@ class _Message extends StatelessWidget {
                         (received
                             ? ""
                             : (", " +
-                                (message.acknowledged ? "Received" : "Sent"))),
+                                (unacked ? "Sent" : "Received"))),
                     style: _timestampTextStyle,
                     textAlign: textAlign,
                   ),
