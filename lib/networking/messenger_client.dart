@@ -176,6 +176,8 @@ class MessengerClient {
     Uint8List payload = new DMMessage(uuid, clientName, dstName, clientNickname, "DMKey", utf8.decode(encryptedMessage)).encode();
 
     onPayLoadReceive(clientName, payload);
+
+    return uuid;
   }
 
   // Send to all devices (unencrypted)
@@ -186,6 +188,8 @@ class MessengerClient {
     Uint8List payload = new DMMessage(uuid, clientName, "", clientNickname, "BroadcastText", message).encode();
 
     onPayLoadReceive(clientName, payload);
+
+    return uuid;
   }
 
 // TODO: Sending delivery/read receipts

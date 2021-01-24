@@ -315,7 +315,12 @@ WHERE m2.timestamp IS NULL;""");
   }
 
   Future<void> sendMessage(String channelId, String contents) async {
-    String id = _messenger.sendDirectTextMessage(channelId, contents);
+    String id;
+    if (channelId.isEmpty) {
+      id = _messenger.sendBroadcast(contents);
+    } else {
+      id = _messenger.sendDirectTextMessage(channelId, contents);
+    }
     await handleMessage(Message(
       id: id,
       timestamp: DateTime.now(),
