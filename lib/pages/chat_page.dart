@@ -103,8 +103,9 @@ class _Message extends StatelessWidget {
   }) : super(key: key);
 
   Future<void> _launchMessage() async {
-    if(await canLaunch(message.data)) {
-      await launch(message.data);
+    final mapUrl = message.data.replaceFirst("geo:", "https://www.google.com/maps/search/?api=1&query=");
+    if(await canLaunch(mapUrl)) {
+      await launch(mapUrl);
     }
   }
 
