@@ -215,9 +215,9 @@ bool rsaVerify(
   }
 }
 
-Uint8List rsaEncrypt(RSAPublicKey myPublic, Uint8List dataToEncrypt) {
+Uint8List rsaEncrypt(RSAPublicKey encryptionPublicKey, Uint8List dataToEncrypt) {
   final encryptor = OAEPEncoding(RSAEngine())
-    ..init(true, PublicKeyParameter<RSAPublicKey>(myPublic)); // true=encrypt
+    ..init(true, PublicKeyParameter<RSAPublicKey>(encryptionPublicKey)); // true=encrypt
 
   return _processInBlocks(encryptor, dataToEncrypt);
 }

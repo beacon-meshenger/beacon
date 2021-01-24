@@ -1,6 +1,7 @@
 import 'package:chat/widgets/qrcode.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 import '../store.dart';
 
@@ -12,6 +13,8 @@ class QRCodePage extends StatefulWidget {
 class _QRCodePageState extends State<QRCodePage> {
   String publicKey;
   String scanned;
+  String data;
+  String addedUser;
 
   @override
   void initState() {
@@ -23,6 +26,7 @@ class _QRCodePageState extends State<QRCodePage> {
 
   Future _getPublicKey() async {
     SharedPreferences _prefs = await SharedPreferences.getInstance();
+
     setState(() {
       publicKey = _prefs.getString('publicKey');
     });
@@ -43,7 +47,44 @@ class _QRCodePageState extends State<QRCodePage> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              if (publicKey != null) QRCode(publicKey: publicKey),
+              if (publicKey != null) Container( child: StreamBuilder<String>(
+                  stream: store.name(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData && snapshot.data.isNotEmpty) {
+                      final encoder = new JsonEncoder();
+                      String data = encoder.convert({
+                        'name': snapshot.data,
+                        'publicKey': publicKey
+                      });
+
+                      return QRCode(data: data);
+                    } else {
+                      return Text("Name loading...");
+                    }
+                  },
+                )
+              ),
+
+              Container(
+                padding: const EdgeInsets.all(16.0),
+                child: StreamBuilder<String>(
+                    stream: store.name(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data.isNotEmpty) {
+                        return Text(
+                          snapshot.data + "'s QR Code",
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+                        );
+                      } else {
+                        return Text("Name loading...");
+                    }
+                  },
+                ),
+              ),
+              Text(
+                "Let your friends scan this to add you!",
+                style: TextStyle(fontSize: 16),
+              )
             ],
           ),
         ),
@@ -53,13 +94,33 @@ class _QRCodePageState extends State<QRCodePage> {
           String scanVal = await qrScan(theme.accentColor);
           // -1 indicates scan was cancelled
           if (scanVal == "-1") return;
-          var keys = store.prefs.getStringList('keys');
-          if (keys == null) keys = [];
-          if (!keys.contains(scanVal)) {
-            keys.add(scanVal);
-            store.prefs.setStringList('keys', keys);
+          // Decode json
+          final decoder = new JsonDecoder();
+          var decodedScanval = decoder.convert(scanVal);
+
+          print(decodedScanval['name']);
+          print(decodedScanval['publicKey']);
+
+          if (decodedScanval['name'] && decodedScanval['publicKey']) {
+            // save name
+            await store.prefs.setStringList('user:${userIdFromPublicKey(decodedScanval['publicKey'])}', decodedScanval['name']);
+
+            var keys = store.prefs.getStringList('keys');
+            if (keys == null) keys = [];
+            if (!keys.contains(decodedScanval['publicKey'])) {
+              keys.add(decodedScanval['publicKey']);
+              await store.prefs.setStringList('keys', keys);
+            }
           }
+          // TODO add send code
+
+
+          // Successfully added
+          setState(() {
+            addedUser = decodedScanval['name'];
+          });
         },
+
         tooltip: 'Add user',
         child: const Icon(Icons.qr_code_scanner),
       ),
