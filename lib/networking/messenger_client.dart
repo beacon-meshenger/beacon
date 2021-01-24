@@ -107,8 +107,6 @@ class MessengerClient {
 
     print("onReceivePayload: ${ message.toString() }");
 
-    // Map<String, dynamic> decoded = decodeMessage(encoded);
-
     if (message.dstName == clientName) {
       // This message is for us!!! No need to do any forwarding
       if (message.type != "DMAck") {
@@ -117,29 +115,36 @@ class MessengerClient {
       for (OnMessageReceived callback in onMessageReceivedCallbacks) {
         callback(message);
       }
+
+    } else if (meshClient.getClientNames().contains(message.dstName)) {
+      // We have a direct connection :) Forward the message
+      // TODO: Fix race if client disconnects here
+      meshClient.sendPayload(message.dstName, encoded);
+
     } else {
-      if (meshClient.getClientNames().contains(message.dstName)) {
-        // We have a direct connection :) Forward the message
-        // TODO: Fix race if client disconnects here
-        meshClient.sendPayload(message.dstName, encoded);
+      // We need to broadcast!
 
-      } else {
-        // We need to broadcast!
+      // If the message we're receiving is a broadcast, surface it to the user
+      if (message.type == "BroadcastText") {
+        for (OnMessageReceived callback in onMessageReceivedCallbacks) {
+          callback(message);
+        }
+      }
 
-        // We never want to send it back to the client we received it from
-        forwardingHistory.add(message.uuid + sendingClientName);
+      // We never want to send it back to the client we received it from
+      forwardingHistory.add(message.uuid + sendingClientName);
 
-        // Probably also a race here
-        for (String connectedClient in meshClient.getClientNames()) {
-          String forwardingPath = message.uuid + connectedClient;
-          // Only forward if we've never forwarded this message to this person before
-          if (!forwardingHistory.contains(forwardingPath)) {
-            meshClient.sendPayload(connectedClient, encoded);
-            forwardingHistory.add(forwardingPath);
-          }
+      // Probably also a race here
+      for (String connectedClient in meshClient.getClientNames()) {
+        String forwardingPath = message.uuid + connectedClient;
+        // Only forward if we've never forwarded this message to this person before
+        if (!forwardingHistory.contains(forwardingPath)) {
+          meshClient.sendPayload(connectedClient, encoded);
+          forwardingHistory.add(forwardingPath);
         }
       }
     }
+
   }
 
   // Send a text message to another user "dst"
@@ -147,8 +152,6 @@ class MessengerClient {
     String uuid = UUID.v4();
 
     Uint8List payload = new DMMessage(uuid, clientName, dstName, clientNickname, "DMText", contents).encode();
-    //
-    // buildMessage(this.clientName, this.clientNickname, dst, "DMText", messageContents, messageUUID);
     onPayLoadReceive(clientName, payload);
 
     return uuid;
@@ -166,13 +169,27 @@ class MessengerClient {
   }
 
   // Sends our public key to someone else, encrypted by their public key, so it can't be modified.
-  String sendKey(String dstName, RSAPublicKey scannedPublicKey, String ourPublicKey) {
+  String sendKey(String dstName, RSAPublicKey scannedPublicKey, String ourPublicData) {
     String uuid = UUID.v4();
-    Uint8List encryptedMessage = rsaEncrypt(scannedPublicKey, utf8.encode(ourPublicKey));
+    Uint8List encryptedMessage = rsaEncrypt(scannedPublicKey, utf8.encode(ourPublicData));
     // send(message)
     Uint8List payload = new DMMessage(uuid, clientName, dstName, clientNickname, "DMKey", utf8.decode(encryptedMessage)).encode();
 
     onPayLoadReceive(clientName, payload);
+
+    return uuid;
+  }
+
+  // Send to all devices (unencrypted)
+  String sendBroadcast(String message) {
+    String uuid = UUID.v4();
+
+    // dstName is empty for a broadcast
+    Uint8List payload = new DMMessage(uuid, clientName, "", clientNickname, "BroadcastText", message).encode();
+
+    onPayLoadReceive(clientName, payload);
+
+    return uuid;
   }
 
 // TODO: Sending delivery/read receipts

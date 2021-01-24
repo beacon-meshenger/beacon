@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 
-
 import 'package:path/path.dart';
 import 'package:flutter/material.dart';
 import 'package:pointycastle/export.dart';
@@ -57,6 +56,11 @@ String nameForUserId(SharedPreferences prefs, String userId) {
 
 String nameForChannelId(SharedPreferences prefs, String channelId) {
   return channelId == "" ? "Nearby" : nameForUserId(prefs, channelId);
+}
+
+String userIdFromPublicKey(String publicKey) {
+  return base64
+      .encode(new SHA256Digest().process(utf8.encode(publicKey)).sublist(0, 4));
 }
 
 const _kMessageTable = "message";
@@ -174,8 +178,7 @@ WHERE m2.timestamp IS NULL;""");
       prefs.setString('privateKey', privateKeyBase64);
     }
 
-    final currentId = base64.encode(new SHA256Digest().process(utf8.encode(prefs.getString('publicKey'))).sublist(0, 4));
-
+    final currentId = userIdFromPublicKey(prefs.getString("publicKey"));
     final currentName = prefs.containsKey(_kPrefCurrentName)
         ? prefs.getString(_kPrefCurrentName)
         : "";
@@ -238,7 +241,14 @@ WHERE m2.timestamp IS NULL;""");
   Future<void> _onMessageReceived(DMMessage msg) async {
     print(msg.toString());
     if (msg.type == "MsgAck") {
-      // TODO: Handle sent/delivered
+      await acknowledgeMessage(
+        _channelId(
+          fromId: msg.srcName,
+          toId: msg.dstName,
+          currentId: currentId,
+        ),
+        msg.contents,
+      );
     } else {
       await handleMessage(Message(
         id: msg.uuid,
@@ -305,7 +315,12 @@ WHERE m2.timestamp IS NULL;""");
   }
 
   Future<void> sendMessage(String channelId, String contents) async {
-    String id = _messenger.sendDirectTextMessage(channelId, contents);
+    String id;
+    if (channelId.isEmpty) {
+      id = _messenger.sendBroadcast(contents);
+    } else {
+      id = _messenger.sendDirectTextMessage(channelId, contents);
+    }
     await handleMessage(Message(
       id: id,
       timestamp: DateTime.now(),
@@ -314,11 +329,6 @@ WHERE m2.timestamp IS NULL;""");
       data: contents,
       acknowledged: false,
     ));
-    // TODO: remove this once we add acknowledgement properly
-    Future.delayed(
-      const Duration(seconds: 2),
-      () => acknowledgeMessage(channelId, id),
-    );
   }
 
   Future<void> handleMessage(Message message) async {
