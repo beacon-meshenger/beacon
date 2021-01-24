@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:chat/locations.dart';
 import 'package:chat/widgets/avatar.dart';
 import 'package:chat/widgets/status.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -46,7 +49,8 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(nameForChannelId(store.prefs, widget.channelId)),
-        bottom: Status(nameForChannelId(store.prefs, widget.channelId) != "Nearby"),
+        bottom:
+            Status(nameForChannelId(store.prefs, widget.channelId) != "Nearby"),
       ),
       body: SafeArea(
         child: _MessageList(
@@ -92,8 +96,9 @@ class _Message extends StatelessWidget {
   }) : super(key: key);
 
   Future<void> _launchMessage() async {
-    final mapUrl = message.data.replaceFirst("geo:", "https://www.google.com/maps/search/?api=1&query=");
-    if(await canLaunch(mapUrl)) {
+    final mapUrl = message.data.replaceFirst(
+        "geo:", "https://www.google.com/maps/search/?api=1&query=");
+    if (await canLaunch(mapUrl)) {
       await launch(mapUrl);
     }
   }
@@ -110,9 +115,12 @@ class _Message extends StatelessWidget {
             this.nextMessage.timestamp.difference(this.message.timestamp) >
                 Duration(minutes: 1));
 
+    final isImage = message.data.startsWith("img:");
     final isLocation = message.data.startsWith("geo:");
     final fromName = message.fromName(store.prefs);
     final unacked = store.unackedMessages.contains(message.id);
+
+    final containerSize = isImage ? size.width * 0.5 : null;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -123,7 +131,8 @@ class _Message extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 18.0),
               child: Avatar(
                 user: fromName[0],
-                color: avatarColors[message.fromId.hashCode % avatarColors.length],
+                color:
+                    avatarColors[message.fromId.hashCode % avatarColors.length],
               ),
             )
           else
@@ -142,14 +151,25 @@ class _Message extends StatelessWidget {
                   child: GestureDetector(
                     onTap: isLocation ? _launchMessage : null,
                     child: Container(
-                      // margin: const EdgeInsets.symmetric(vertical: 4.0),
+                      width: containerSize,
+                      height: containerSize,
                       constraints: BoxConstraints(maxWidth: size.width * 2 / 3),
                       decoration: BoxDecoration(
-                        color: received
-                            ? (theme.brightness == Brightness.light
-                                ? Colors.grey[200]
-                                : Colors.grey[800])
-                            : theme.accentColor,
+                        color: isImage
+                            ? null
+                            : received
+                                ? (theme.brightness == Brightness.light
+                                    ? Colors.grey[200]
+                                    : Colors.grey[800])
+                                : theme.accentColor,
+                        image: isImage
+                            ? DecorationImage(
+                                image: MemoryImage(
+                                  base64Decode(message.data.substring(4)),
+                                ),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
                         borderRadius: received ? _receivedRadius : _sentRadius,
                       ),
                       padding: const EdgeInsets.all(8.0),
@@ -157,25 +177,26 @@ class _Message extends StatelessWidget {
                         top: 4.0,
                         bottom: endOfThread ? 4.0 : 0.0,
                       ),
-                      child: Text(
-                        isLocation ? "🌍 Shared Location" : message.data,
-                        style: TextStyle(
-                          color: received ? null : Colors.white,
-                          height: 1.4,
-                        ),
-                        textAlign: textAlign,
-                      ),
+                      child: isImage
+                          ? SizedBox()
+                          : Text(
+                              isLocation ? "🌍 Shared Location" : message.data,
+                              style: TextStyle(
+                                color: received ? null : Colors.white,
+                                height: 1.4,
+                              ),
+                              textAlign: textAlign,
+                            ),
                     ),
                   ),
                 ),
                 if (endOfThread)
                   Text(
-                (showFullName && received ? "$fromName, " : "") +
-                    _dateFormat.format(message.timestamp) +
+                    (showFullName && received ? "$fromName, " : "") +
+                        _dateFormat.format(message.timestamp) +
                         (received
                             ? ""
-                            : (", " +
-                                (unacked ? "Sent" : "Received"))),
+                            : (", " + (unacked ? "Sent" : "Received"))),
                     style: _timestampTextStyle,
                     textAlign: textAlign,
                   ),
@@ -206,6 +227,8 @@ class _MessageList extends StatefulWidget {
   _MessageListState createState() => _MessageListState();
 }
 
+final _picker = ImagePicker();
+
 class _MessageListState extends State<_MessageList> {
   TextEditingController _controller;
 
@@ -227,6 +250,20 @@ class _MessageListState extends State<_MessageList> {
       widget.onMessageSend(_controller.text);
     }
     _controller.text = "";
+  }
+
+  void _onSendImageClick() async {
+    final pickedFile = await _picker.getImage(
+      source: ImageSource.camera,
+      maxWidth: 480,
+      maxHeight: 480,
+      imageQuality: 20,
+    );
+    if (pickedFile == null) return;
+    Uint8List data = await pickedFile.readAsBytes();
+    // print(data.lengthInBytes);
+    print(base64Encode(data).length);
+    widget.onMessageSend("img:${base64Encode(data)}");
   }
 
   void _onSendLocationClick() async {
@@ -298,16 +335,22 @@ class _MessageListState extends State<_MessageList> {
                     ),
                   ),
                   IconButton(
+                    icon: Icon(Icons.camera_alt_outlined),
+                    tooltip: "Send Image",
+                    color: Colors.grey,
+                    onPressed: _onSendImageClick,
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.location_on_outlined),
+                    tooltip: "Send Current Location",
+                    color: Colors.grey,
+                    onPressed: _onSendLocationClick,
+                  ),
+                  IconButton(
                     icon: Icon(Icons.send),
                     tooltip: "Send",
                     color: theme.accentColor,
                     onPressed: _controller.text.isEmpty ? null : _onSendClick,
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.location_on_outlined),
-                    tooltip: "Send Location",
-                    color: theme.accentColor,
-                    onPressed: _onSendLocationClick,
                   ),
                 ],
               ),

@@ -273,9 +273,10 @@ WHERE m2.timestamp IS NULL;""");
         msg.contents,
       );
     } else if (msg.type == "DMKeyAck") {
-      
     } else if (msg.type == "DMKey") {
-      var unencrypted = rsaDecrypt(parsePrivateKeyFromPem(prefs.getString('privateKey')), base64.decode(msg.contents));
+      var unencrypted = rsaDecrypt(
+          parsePrivateKeyFromPem(prefs.getString('privateKey')),
+          base64.decode(msg.contents));
 
       final decoder = new JsonDecoder();
 
@@ -288,10 +289,8 @@ WHERE m2.timestamp IS NULL;""");
 
       // String currentKey = prefs.getString("key:${msg.srcName}");
 
-      bool sendInitialConnection = _channels.containsKey(
-          userIdFromPublicKey(key)
-      );
-
+      bool sendInitialConnection =
+          _channels.containsKey(userIdFromPublicKey(key));
 
       await prefs.setString("key:${msg.srcName}", key);
 
@@ -299,11 +298,8 @@ WHERE m2.timestamp IS NULL;""");
 
       if (!sendInitialConnection) {
         sendMessage(
-            msg.srcName,
-            'Hi $displayName!\nGlad to be connected on Beacon!'
-        );
+            msg.srcName, 'Hi $displayName!\nGlad to be connected on Beacon!');
       }
-
     } else {
       // if (msg.type == "BroadcastText") {
       await prefs.setString("user:${msg.srcName}", msg.srcNickname);
@@ -326,11 +322,16 @@ WHERE m2.timestamp IS NULL;""");
       ));
 
       // Only show notification when it's not from us, and we're not in the destination channel
-      if (msg.srcName != currentId && !_messageCallbacks.containsKey(msg.dstName)) {
+      if (msg.srcName != currentId &&
+          !_messageCallbacks.containsKey(msg.dstName)) {
         await notifications.show(
           0,
           nameForChannelId(prefs, msg.dstName),
-          data.startsWith("geo:") ? "🌍 Shared Location" : data,
+          data.startsWith("img:")
+              ? "📷 Image"
+              : data.startsWith("geo:")
+                  ? "🌍 Shared Location"
+                  : data,
           notificationDetails,
         );
       }
@@ -394,7 +395,8 @@ WHERE m2.timestamp IS NULL;""");
       id = messenger.sendBroadcast(contents);
     } else {
       String key = prefs.getString('key:$channelId');
-      id = messenger.sendDirectTextMessage(channelId, contents, parsePublicKeyFromPem(key));
+      id = messenger.sendDirectTextMessage(
+          channelId, contents, parsePublicKeyFromPem(key));
     }
     unackedMessages.add(id);
     await handleMessage(Message(
@@ -435,7 +437,8 @@ WHERE m2.timestamp IS NULL;""");
       print(
           "[Store] Notifying \"$channelId\" callback about $messageId acknowledgement...");
       _messageCallbacks[channelId](MapEntry(
-        false /*update*/, null,
+        false /*update*/,
+        null,
       ));
     }
 

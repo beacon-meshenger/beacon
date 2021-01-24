@@ -22,14 +22,26 @@ class ChatListPage extends StatelessWidget {
               final last = list[i].value;
               return ListTile(
                 leading: Avatar(
-                  user: channelId == "" ? "📢" : nameForChannelId(store.prefs, channelId)[0],
-                  color: channelId == "" ? theme.cardColor : avatarColors[channelId.hashCode % avatarColors.length],
+                  user: channelId == ""
+                      ? "📢"
+                      : nameForChannelId(store.prefs, channelId)[0],
+                  color: channelId == ""
+                      ? theme.cardColor
+                      : avatarColors[channelId.hashCode % avatarColors.length],
                   size: 40.0,
                 ),
                 title: Text(nameForChannelId(store.prefs, list[i].key)),
                 subtitle: last == null
                     ? null
-                    : Text(last.startsWith("geo:") ? "🌍 Shared Location" : last),
+                    : Text(
+                        last.startsWith("img:")
+                            ? "📷 Image"
+                            : last.startsWith("geo:")
+                                ? "🌍 Shared Location"
+                                : last,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                 onTap: () {
                   Navigator.push(context, new MaterialPageRoute(
                     builder: (context) {

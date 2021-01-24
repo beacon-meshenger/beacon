@@ -16,7 +16,7 @@ class _QRCodePageState extends State<QRCodePage> {
   String scanned;
   String data;
   String addedUser;
-  GlobalKey<ScaffoldState> scaffoldState;
+  GlobalKey<ScaffoldState> scaffoldState = GlobalKey();
 
   @override
   void initState() {
