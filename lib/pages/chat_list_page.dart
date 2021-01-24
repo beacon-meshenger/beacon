@@ -23,7 +23,7 @@ class ChatListPage extends StatelessWidget {
               return ListTile(
                 leading: Avatar(
                   user: channelId == "" ? "📢" : nameForChannelId(store.prefs, channelId)[0],
-                  color: channelId == "" ? theme.cardColor : theme.accentColor,
+                  color: channelId == "" ? theme.cardColor : avatarColors[channelId.hashCode % avatarColors.length],
                   size: 40.0,
                 ),
                 title: Text(nameForChannelId(store.prefs, list[i].key)),
