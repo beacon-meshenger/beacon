@@ -118,7 +118,7 @@ class _QRCodePageState extends State<QRCodePage> {
 
 
           // Successfully added
-          scaffoldState.currentState.showSnackBar(new SnackBar(content: new Text('Hello!')));
+          scaffoldState.currentState.showSnackBar(new SnackBar(content: new Text(decodedScanval['name'])));
         },
 
         tooltip: 'Add user',
