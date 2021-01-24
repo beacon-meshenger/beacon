@@ -31,6 +31,8 @@ dependencies:
   pointycastle: ^2.0.1
   flutter_svg: ^0.19.0
   rive: ^0.6.4
+  geolocator: ^6.1.14
+  url_launcher: ^5.7.10
   flutter:
     sdk: flutter
 

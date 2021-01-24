@@ -16,6 +16,7 @@ class ChatListPage extends StatelessWidget {
         final list = snapshot.data.entries.toList();
         return ListView.builder(
           itemBuilder: (context, i) {
+            final last = list[i].value;
             return ListTile(
               leading: Avatar(
                 user: list[i].key == "" ? "📢" : list[i].key[0],
@@ -23,7 +24,9 @@ class ChatListPage extends StatelessWidget {
                 size: 40.0,
               ),
               title: Text(nameForChannelId(store.prefs, list[i].key)),
-              subtitle: list[i].value == null ? null : Text(list[i].value),
+              subtitle: last == null
+                  ? null
+                  : Text(last.startsWith("geo:") ? "Shared Location" : last),
               onTap: () {
                 Navigator.push(context, new MaterialPageRoute(
                   builder: (context) {

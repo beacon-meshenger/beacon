@@ -75,7 +75,6 @@ class Message {
   final String id;
   final DateTime timestamp;
   final String fromId;
-  String fromName;
   final String toId;
   final String data;
   bool acknowledged;
@@ -84,7 +83,6 @@ class Message {
     @required this.id,
     @required this.timestamp,
     @required this.fromId,
-    this.fromName = "?",
     @required this.toId,
     @required this.data,
     this.acknowledged = true,
@@ -115,11 +113,12 @@ class Message {
         map[_kMessageKeyTimestamp] * 1000,
       ),
       fromId: map[_kMessageKeyFromId],
-      fromName: nameForUserId(prefs, map[_kMessageKeyFromId]),
       toId: map[_kMessageKeyToId],
       data: map[_kMessageKeyData],
     );
   }
+
+  fromName(SharedPreferences prefs) => nameForUserId(prefs, fromId);
 }
 
 class Store {
