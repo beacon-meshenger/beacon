@@ -55,6 +55,11 @@ class DMMessage {
 
   static DMMessage decode(Uint8List encoded) =>
       DMMessage.fromJson(JSON_DECODER.convert(utf8.decode(encoded)));
+
+  @override
+  String toString()
+    => toJson().toString();
+
 }
 
 
