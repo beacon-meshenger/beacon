@@ -46,7 +46,7 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(nameForChannelId(store.prefs, widget.channelId)),
-        bottom: Status(),
+        bottom: Status(nameForChannelId(store.prefs, widget.channelId) != "Nearby"),
       ),
       body: SafeArea(
         child: _MessageList(
