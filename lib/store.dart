@@ -297,7 +297,7 @@ WHERE m2.timestamp IS NULL;""");
 
       String displayName = prefs.getString('user:${msg.srcName}');
 
-      if (sendInitialConnection) {
+      if (!sendInitialConnection) {
         sendMessage(
             msg.srcName,
             'Hi $displayName!\nGlad to be connected on Beacon!'
