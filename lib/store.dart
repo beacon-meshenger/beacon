@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:path/path.dart';
 import 'package:flutter/material.dart';
 import 'package:pointycastle/export.dart';
@@ -121,6 +122,16 @@ class Message {
   fromName(SharedPreferences prefs) => nameForUserId(prefs, fromId);
 }
 
+const androidDetails = AndroidNotificationDetails(
+  "com.mrbbot.chat.notifications",
+  "Messages",
+  "Sent Messages",
+  importance: Importance.max,
+  priority: Priority.high,
+);
+const NotificationDetails notificationDetails =
+    NotificationDetails(android: androidDetails);
+
 class Store {
   static Store of(BuildContext context) => StoreProvider.of(context).store;
 
@@ -190,9 +201,19 @@ WHERE m2.timestamp IS NULL;""");
     // await prefs.setString(_kPrefUserNamePrefix + "User3", "Daisy");
     // await prefs.setString(_kPrefUserNamePrefix + "User4", "Jenifer");
 
+    // Initialise notifications plugin
+    FlutterLocalNotificationsPlugin notifications =
+        FlutterLocalNotificationsPlugin();
+    const AndroidInitializationSettings initialisationSettingsAndroid =
+        AndroidInitializationSettings("ic_stat_app");
+    const InitializationSettings initialisationSettings =
+        InitializationSettings(android: initialisationSettingsAndroid);
+    await notifications.initialize(initialisationSettings);
+
     return Store._(
       db: db,
       prefs: prefs,
+      notifications: notifications,
       channels: initialChannels,
       currentId: currentId,
       currentName: currentName,
@@ -201,6 +222,7 @@ WHERE m2.timestamp IS NULL;""");
 
   final Database db;
   final SharedPreferences prefs;
+  final FlutterLocalNotificationsPlugin notifications;
   final Map<String, String> _channels;
   final BehaviorSubject<Map<String, String>> _channelsSubject;
 
@@ -216,6 +238,7 @@ WHERE m2.timestamp IS NULL;""");
   Store._({
     @required this.db,
     @required this.prefs,
+    @required this.notifications,
     @required Map<String, String> channels,
     @required this.currentId,
     @required String currentName,
@@ -232,7 +255,7 @@ WHERE m2.timestamp IS NULL;""");
 
     messenger.registerOnMessageReceivedCallback(_onMessageReceived);
   }
-  
+
   void _onConnectedDevicesChanged(int devices) {
     _connectedDevicesSubject.add(devices);
   }
@@ -249,7 +272,9 @@ WHERE m2.timestamp IS NULL;""");
         msg.contents,
       );
     } else if (msg.type == "DMKey") {
-      var unencrypted = rsaDecrypt(parsePrivateKeyFromPem(prefs.getString('privateKey')), utf8.encode(msg.contents));
+      var unencrypted = rsaDecrypt(
+          parsePrivateKeyFromPem(prefs.getString('privateKey')),
+          utf8.encode(msg.contents));
 
       final decoder = new JsonDecoder();
 
@@ -266,7 +291,6 @@ WHERE m2.timestamp IS NULL;""");
         keys.add(key);
         await prefs.setStringList('keys', keys);
       }
-
     } else {
       // if (msg.type == "BroadcastText") {
       await prefs.setString("user:${msg.srcName}", msg.srcNickname);
@@ -278,6 +302,13 @@ WHERE m2.timestamp IS NULL;""");
         toId: msg.dstName,
         data: msg.contents,
       ));
+
+      await notifications.show(
+        0,
+        nameForChannelId(prefs, msg.dstName),
+        msg.contents,
+        notificationDetails,
+      );
     }
   }
 
@@ -308,7 +339,8 @@ WHERE m2.timestamp IS NULL;""");
           if (i == -1) {
             messages.insert(0, entry.value);
           } else {
-            print("[Store] Tried to insert message ${entry.value.id} again, ignoring...");
+            print(
+                "[Store] Tried to insert message ${entry.value.id} again, ignoring...");
           }
         } else
         /*update*/ {

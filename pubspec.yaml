@@ -33,6 +33,7 @@ dependencies:
   rive: ^0.6.4
   geolocator: ^6.1.14
   url_launcher: ^5.7.10
+  flutter_local_notifications: ^3.0.3
   flutter:
     sdk: flutter
 
