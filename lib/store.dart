@@ -272,12 +272,6 @@ WHERE m2.timestamp IS NULL;""");
         ),
         msg.contents,
       );
-    } else if (msg.type == "DMKeyAck") {
-      print('Keys receieved by recipient');
-      // Send message to create channel
-
-
-
     } else if (msg.type == "DMKey") {
       var unencrypted = rsaDecrypt(parsePrivateKeyFromPem(prefs.getString('privateKey')), base64.decode(msg.contents));
 
@@ -290,28 +284,43 @@ WHERE m2.timestamp IS NULL;""");
 
       await prefs.setString("user:${msg.srcName}", name);
 
+      // String currentKey = prefs.getString("key:${msg.srcName}");
+
+      bool sendInitialConnection = _channels.containsKey(
+          userIdFromPublicKey(key)
+      );
+
+
       await prefs.setString("key:${msg.srcName}", key);
 
       String displayName = prefs.getString('user:${msg.srcName}');
 
-      sendMessage(
-          msg.srcName,
-          'Hi $displayName!\nGlad to be connected on Beacon!'
-      );
+      if (sendInitialConnection) {
+        sendMessage(
+            msg.srcName,
+            'Hi $displayName!\nGlad to be connected on Beacon!'
+        );
+      }
 
     } else {
       // if (msg.type == "BroadcastText") {
       await prefs.setString("user:${msg.srcName}", msg.srcNickname);
       // }
-      Uint8List unencrypted = rsaDecrypt(parsePrivateKeyFromPem(prefs.getString('privateKey')), base64.decode(msg.contents));
-      String decoded = utf8.decode(unencrypted);
+
+      String data = msg.contents;
+      if (msg.type == "DMText") {
+        Uint8List unencrypted = rsaDecrypt(
+            parsePrivateKeyFromPem(prefs.getString('privateKey')),
+            base64.decode(msg.contents));
+        data = utf8.decode(unencrypted);
+      }
 
       await handleMessage(Message(
         id: msg.uuid,
         timestamp: DateTime.now(),
         fromId: msg.srcName,
         toId: msg.dstName,
-        data: decoded,
+        data: data,
       ));
 
       // Only show notification when it's not from us
