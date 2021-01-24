@@ -20,7 +20,7 @@ class ChatListPage extends StatelessWidget {
                 user: list[i].key == "" ? "@" : list[i].key,
                 size: 40.0,
               ),
-              title: Text(list[i].key == "" ? "Everyone" : list[i].key),
+              title: Text(nameForChannelId(store.prefs, list[i].key)),
               subtitle: Text(list[i].value),
               onTap: () {
                 Navigator.push(context, new MaterialPageRoute(

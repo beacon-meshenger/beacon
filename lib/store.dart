@@ -39,17 +39,20 @@ String _channelId({
           : fromId;
 }
 
-const _kPrefCurrentId = "me:id";
 const _kPrefCurrentName = "me:name";
 const _kPrefUserNamePrefix = "user:";
 
-String _nameForId(SharedPreferences prefs, String userId) {
+String nameForUserId(SharedPreferences prefs, String userId) {
   final key = _kPrefUserNamePrefix + userId;
   if (prefs.containsKey(key)) {
     return prefs.getString(key);
   } else {
     return "Unknown";
   }
+}
+
+String nameForChannelId(SharedPreferences prefs, String channelId) {
+  return channelId == "" ? "Everyone" : nameForUserId(prefs, channelId);
 }
 
 const _kMessageTable = "message";
@@ -102,7 +105,7 @@ class Message {
         map[_kMessageKeyTimestamp] * 1000,
       ),
       fromId: map[_kMessageKeyFromId],
-      fromName: _nameForId(prefs, map[_kMessageKeyFromId]),
+      fromName: nameForUserId(prefs, map[_kMessageKeyFromId]),
       toId: map[_kMessageKeyToId],
       data: map[_kMessageKeyData],
     );
@@ -164,7 +167,7 @@ WHERE m2.timestamp IS NULL;""");
       prefs.setString('privateKey', privateKeyBase64);
     }
 
-    final currentId = "UserMe"; // TODO: dynamic (store with `_kPrefCurrentId`)
+    final currentId = "UserMe"; // TODO: dynamic (derive from public key?)
     final currentName = prefs.containsKey(_kPrefCurrentName) ? prefs.getString(_kPrefCurrentName) : "";
     print("ID: $currentId Name: $currentName");
 

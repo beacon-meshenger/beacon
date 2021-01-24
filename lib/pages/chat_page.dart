@@ -42,7 +42,7 @@ class _ChatPageState extends State<ChatPage> {
     final store = Store.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Beacon"),
+        title: Text(nameForChannelId(store.prefs, widget.channelId)),
       ),
       body: SafeArea(
         child: _MessageList(
