@@ -77,17 +77,6 @@ const _receivedRadius = BorderRadius.only(
 );
 const _timestampTextStyle = TextStyle(color: Colors.grey, fontSize: 12.0);
 
-const _avatarColors = [
-  Colors.deepOrange,
-  Colors.amber,
-  Colors.blueAccent,
-  Colors.cyanAccent,
-  Colors.deepPurple,
-  Colors.greenAccent,
-  Colors.pinkAccent,
-  Colors.tealAccent,
-];
-
 class _Message extends StatelessWidget {
   final String currentUserId;
   final Message message;
@@ -103,8 +92,9 @@ class _Message extends StatelessWidget {
   }) : super(key: key);
 
   Future<void> _launchMessage() async {
-    if(await canLaunch(message.data)) {
-      await launch(message.data);
+    final mapUrl = message.data.replaceFirst("geo:", "https://www.google.com/maps/search/?api=1&query=");
+    if(await canLaunch(mapUrl)) {
+      await launch(mapUrl);
     }
   }
 
@@ -133,7 +123,7 @@ class _Message extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 18.0),
               child: Avatar(
                 user: fromName[0],
-                color: _avatarColors[message.fromId.hashCode % _avatarColors.length],
+                color: avatarColors[message.fromId.hashCode % avatarColors.length],
               ),
             )
           else
@@ -180,7 +170,7 @@ class _Message extends StatelessWidget {
                 ),
                 if (endOfThread)
                   Text(
-                (showFullName ? "$fromName, " : "") +
+                (showFullName && received ? "$fromName, " : "") +
                     _dateFormat.format(message.timestamp) +
                         (received
                             ? ""
