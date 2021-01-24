@@ -7,6 +7,8 @@
 // }
 
 
+import 'package:flutter/cupertino.dart';
+
 class BiMap<K, V> implements Map<K, V> {
    Map<K, V> _mapForward = new Map<K, V>();
    Map<V, K> _mapInverse = new Map<V, K>();
@@ -127,5 +129,25 @@ class BiMap<K, V> implements Map<K, V> {
   }
 
 
+
+}
+
+class ObservableBiMap<K, V> extends BiMap<K, V> {
+
+  final ValueChanged<int> _callback;
+
+  ObservableBiMap(this._callback);
+
+  @override
+  void operator []=(K key, V value) {
+    super[key] = value;
+    _callback(length);
+  }
+
+  @override
+  V remove(Object key) {
+    super.remove(key);
+    _callback(length);
+  }
 
 }

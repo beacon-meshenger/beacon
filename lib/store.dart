@@ -1,15 +1,19 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 
-import 'package:chat/mesh_client.dart';
+
 import 'package:path/path.dart';
 import 'package:flutter/material.dart';
+import 'package:pointycastle/export.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rxdart/rxdart.dart';
 
 import 'crypto.dart';
-import 'messenger_client.dart';
+
+import 'networking/mesh_client.dart';
+import 'networking/messenger_client.dart';
 
 class StoreProvider extends InheritedWidget {
   final Store store;
@@ -169,10 +173,12 @@ WHERE m2.timestamp IS NULL;""");
       prefs.setString('privateKey', privateKeyBase64);
     }
 
-    final currentId = "UserMe"; // TODO: dynamic (derive from public key?)
+    final currentId = base64.encode(new SHA256Digest().process(utf8.encode(prefs.getString('publicKey'))).sublist(0, 4));
+
     final currentName = prefs.containsKey(_kPrefCurrentName)
         ? prefs.getString(_kPrefCurrentName)
         : "";
+
     print("ID: $currentId Name: $currentName");
 
     return Store._(
@@ -211,6 +217,7 @@ WHERE m2.timestamp IS NULL;""");
         _currentNameSubject = BehaviorSubject.seeded(currentName),
         _connectedDevicesSubject = BehaviorSubject<int>.seeded(null) {
     _mesh = MeshClient(currentId, _onConnectedDevicesChanged);
+    _mesh.initialise().then((_) => _mesh.start());
     _messenger = MessengerClient(currentId, currentName, _mesh);
     print("Set up messenger");
 
