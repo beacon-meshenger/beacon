@@ -23,13 +23,30 @@ class StoreProvider extends InheritedWidget {
   bool updateShouldNotify(covariant StoreProvider oldWidget) => false;
 }
 
-String _channelId({@required String fromId, @required String toId}) {
-  if (toId == "") return "";
-  final order = toId.compareTo(fromId) < 0;
-  return "${order ? toId : fromId}-${order ? fromId : toId}";
+String _channelId({
+  @required String fromId,
+  @required String toId,
+  @required String currentId,
+}) {
+  return toId == ""
+      ? ""
+      : fromId == currentId
+          ? toId
+          : fromId;
 }
 
-const _kUserPrefix = "user:";
+const _kPrefCurrentId = "me:id";
+const _kPrefCurrentName = "me:name";
+const _kPrefUserNamePrefix = "user:";
+
+String _nameForId(SharedPreferences prefs, String userId) {
+  final key = _kPrefUserNamePrefix + userId;
+  if (prefs.containsKey(key)) {
+    return prefs.getString(key);
+  } else {
+    return "Unknown";
+  }
+}
 
 const _kMessageTable = "message";
 const _kMessageKeyId = "id";
@@ -56,26 +73,32 @@ class Message {
     @required this.data,
   });
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toMap({@required String currentId}) {
     return {
       _kMessageKeyId: id,
       _kMessageKeyTimestamp: timestamp.millisecondsSinceEpoch ~/ 1000,
-      _kMessageKeyChannelId: _channelId(fromId: fromId, toId: toId),
+      _kMessageKeyChannelId: _channelId(
+        fromId: fromId,
+        toId: toId,
+        currentId: currentId,
+      ),
       _kMessageKeyFromId: fromId,
       _kMessageKeyToId: toId,
       _kMessageKeyData: data,
     };
   }
 
-  factory Message.fromMap(Map<String, dynamic> map,
-      {@required SharedPreferences prefs}) {
+  factory Message.fromMap(
+    Map<String, dynamic> map, {
+    @required SharedPreferences prefs,
+  }) {
     return Message(
       id: map[_kMessageKeyId],
       timestamp: DateTime.fromMillisecondsSinceEpoch(
-          map[_kMessageKeyTimestamp] * 1000),
+        map[_kMessageKeyTimestamp] * 1000,
+      ),
       fromId: map[_kMessageKeyFromId],
-      // fromName: prefs.get(_kUserPrefix + map[_kMessageKeyFromId]), // TODO: use this instead
-      fromName: map[_kMessageKeyFromId],
+      fromName: _nameForId(prefs, map[_kMessageKeyFromId]),
       toId: map[_kMessageKeyToId],
       data: map[_kMessageKeyData],
     );
@@ -110,19 +133,32 @@ class Store {
     final path = join(await getDatabasesPath(), "store.db");
     final db = await openDatabase(path, version: 1, onCreate: _initDatabase);
     final prefs = await SharedPreferences.getInstance();
-
     print((await db.query(_kMessageTable)).join("\n"));
 
-//     final initialChannelsQuery = await db.rawQuery("""WITH ranked AS (SELECT channelId, data, row_number() OVER (PARTITION BY channelId ORDER BY timestamp DESC) AS row FROM message AS m)
-// SELECT channelId, data FROM ranked WHERE row = 1""");
-//     final initialChannels = new Map<String, String>.fromIterable(
-//       initialChannelsQuery,
-//       key: (map) => map["channelId"],
-//       value: (map) => map["data"],
-//     );
-//     print(initialChannels);
+    final initialChannelsQuery =
+        await db.rawQuery("""SELECT m1.channelId, m1.data
+FROM message m1 LEFT JOIN message m2
+ON (m1.channelId = m2.channelId AND m1.timestamp < m2.timestamp)
+WHERE m2.timestamp IS NULL;""");
+    final initialChannels = SplayTreeMap<String, String>.fromIterable(
+      initialChannelsQuery,
+      key: (map) => map["channelId"],
+      value: (map) => map["data"],
+    );
 
-    return Store._(db: db, prefs: prefs, initialChannels: {});
+    // TODO: maybe move key init to here to?
+
+    final currentId = "UserMe"; // TODO: dynamic (store with `_kPrefCurrentId`)
+    final currentName = prefs.containsKey(_kPrefCurrentName) ? prefs.getString(_kPrefCurrentName) : "";
+    print("ID: $currentId Name: $currentName");
+
+    return Store._(
+      db: db,
+      prefs: prefs,
+      channels: initialChannels,
+      currentId: currentId,
+      currentName: currentName,
+    );
   }
 
   final Database db;
@@ -130,15 +166,23 @@ class Store {
   final Map<String, String> _channels;
   final BehaviorSubject<Map<String, String>> _channelsSubject;
   final Map<String, ValueChanged<Message>> _newMessageCallbacks;
+  final String _currentId;
+  String _currentName;
+  final BehaviorSubject<String> _currentNameSubject;
 
   Store._({
     @required this.db,
     @required this.prefs,
-    @required Map<String, String> initialChannels,
-  })  : _channels = initialChannels,
+    @required Map<String, String> channels,
+    @required String currentId,
+    @required String currentName,
+  })  : _channels = channels,
         _channelsSubject =
-            BehaviorSubject.seeded(UnmodifiableMapView(initialChannels)),
-        _newMessageCallbacks = {};
+            BehaviorSubject.seeded(UnmodifiableMapView(channels)),
+        _newMessageCallbacks = {},
+        _currentId = currentId,
+        _currentName = currentName,
+        _currentNameSubject = BehaviorSubject.seeded(currentName);
 
   Stream<Map<String, String>> channels() {
     print("[Store] Subscribing to all channels...");
@@ -171,8 +215,17 @@ class Store {
     return controller.stream;
   }
 
+  Stream<String> name() {
+    print("[Store] Subscribing to name...");
+    return _currentNameSubject.stream;
+  }
+
   Future<void> handleMessage(Message message) async {
-    final channelId = _channelId(fromId: message.fromId, toId: message.toId);
+    final channelId = _channelId(
+      fromId: message.fromId,
+      toId: message.toId,
+      currentId: _currentId,
+    );
     print("[Store] Handling channel \"$channelId\" message ${message.id}...");
     _channels[channelId] = message.data;
     _channelsSubject.add(UnmodifiableMapView(this._channels));
@@ -182,6 +235,12 @@ class Store {
       _newMessageCallbacks[channelId](message);
     }
 
-    await db.insert(_kMessageTable, message.toMap());
+    await db.insert(_kMessageTable, message.toMap(currentId: _currentId));
+  }
+
+  Future<void> handleNameChange(String name) async {
+    _currentName = name;
+    _currentNameSubject.add(name);
+    await prefs.setString(_kPrefCurrentName, name);
   }
 }
