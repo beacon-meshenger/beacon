@@ -30,6 +30,7 @@ dependencies:
   flutter_barcode_scanner: ^1.0.2
   pointycastle: ^2.0.1
   flutter_svg: ^0.19.0
+  rive: ^0.6.4
   flutter:
     sdk: flutter
 
@@ -59,6 +60,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/logo.svg
+    - assets/logo.riv
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

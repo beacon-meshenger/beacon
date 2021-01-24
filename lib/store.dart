@@ -175,6 +175,12 @@ WHERE m2.timestamp IS NULL;""");
         : "";
     print("ID: $currentId Name: $currentName");
 
+    // await prefs.setString(_kPrefUserNamePrefix + "User0", "Alice");
+    // await prefs.setString(_kPrefUserNamePrefix + "User1", "Bob");
+    // await prefs.setString(_kPrefUserNamePrefix + "User2", "Charlie");
+    // await prefs.setString(_kPrefUserNamePrefix + "User3", "Daisy");
+    // await prefs.setString(_kPrefUserNamePrefix + "User4", "Jenifer");
+
     return Store._(
       db: db,
       prefs: prefs,
@@ -209,7 +215,7 @@ WHERE m2.timestamp IS NULL;""");
             BehaviorSubject.seeded(UnmodifiableMapView(channels)),
         _messageCallbacks = {},
         _currentNameSubject = BehaviorSubject.seeded(currentName),
-        _connectedDevicesSubject = BehaviorSubject<int>.seeded(null) {
+        _connectedDevicesSubject = BehaviorSubject<int>.seeded(3) {
     _mesh = MeshClient(currentId, _onConnectedDevicesChanged);
     _messenger = MessengerClient(currentId, currentName, _mesh);
     print("Set up messenger");
