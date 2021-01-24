@@ -14,7 +14,7 @@ class Status extends StatelessWidget implements PreferredSizeWidget {
             stream: store.connectedDevices(),
             builder: (context, snapshot) {
               return Text(
-                "Mesh Status: ${snapshot.hasData ? "connected to ${snapshot.data} device${snapshot.data == 1 ? "" : "s"}" : "connecting..."} ",
+                "Mesh Status: ${snapshot.hasData ? "connected to ${snapshot.data} phone${snapshot.data == 1 ? "" : "s"}" : "connecting..."} ",
                 style: const TextStyle(
                   fontSize: 14.0,
                   height: 1.0,

@@ -52,7 +52,7 @@ String nameForUserId(SharedPreferences prefs, String userId) {
 }
 
 String nameForChannelId(SharedPreferences prefs, String channelId) {
-  return channelId == "" ? "Everyone" : nameForUserId(prefs, channelId);
+  return channelId == "" ? "Nearby" : nameForUserId(prefs, channelId);
 }
 
 const _kMessageTable = "message";

@@ -27,6 +27,8 @@ void main() async {
   runApp(ChatApp(store: store));
 }
 
+const _kBluePrimary = Color(0xff2eb9ff);
+
 class ChatApp extends StatelessWidget {
   final Store store;
 
@@ -40,8 +42,25 @@ class ChatApp extends StatelessWidget {
         title: "Beacon",
         theme: ThemeData(
           brightness: Brightness.dark,
-          primarySwatch: Colors.deepOrange,
-          accentColor: Colors.deepOrange,
+          // primarySwatch: Colors.deepOrange,
+          // accentColor: Colors.deepOrange,
+          // Generate with https://material.io/design/color/the-color-system.html#tools-for-picking-colors
+          primarySwatch: MaterialColor(
+            _kBluePrimary.value,
+            <int, Color>{
+              50: Color(0xffe2f6ff),
+              100: Color(0xffb4e6ff),
+              200: Color(0xff83d6ff),
+              300: Color(0xff52c6ff),
+              400: _kBluePrimary,
+              500: Color(0xff17adfe),
+              600: Color(0xff189eee),
+              700: Color(0xff178bda),
+              800: Color(0xff157ac6),
+              900: Color(0xff165aa3),
+            },
+          ),
+          accentColor: _kBluePrimary,
         ),
         home: HomePage(),
       ),

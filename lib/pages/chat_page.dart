@@ -104,7 +104,10 @@ class _Message extends StatelessWidget {
           if (endOfThread)
             Padding(
               padding: const EdgeInsets.only(bottom: 18.0),
-              child: Avatar(user: message.fromName),
+              child: Avatar(
+                user: message.fromName[0],
+                color: theme.accentColor,
+              ),
             )
           else
             SizedBox(width: 32.0),
