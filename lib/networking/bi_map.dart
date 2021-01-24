@@ -52,7 +52,8 @@ class BiMap<K, V> implements Map<K, V> {
 
   @override
   void clear() {
-    // TODO: implement clear
+    _mapForward.clear();
+    _mapInverse.clear();
   }
 
   @override
@@ -147,6 +148,12 @@ class ObservableBiMap<K, V> extends BiMap<K, V> {
   @override
   V remove(Object key) {
     super.remove(key);
+    _callback(length);
+  }
+
+  @override
+  void clear() {
+    super.clear();
     _callback(length);
   }
 

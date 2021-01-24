@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:path/path.dart';
 import 'package:flutter/material.dart';
 import 'package:pointycastle/export.dart';
@@ -122,6 +123,16 @@ class Message {
   fromName(SharedPreferences prefs) => nameForUserId(prefs, fromId);
 }
 
+const androidDetails = AndroidNotificationDetails(
+  "com.mrbbot.chat.notifications",
+  "Messages",
+  "Sent Messages",
+  importance: Importance.max,
+  priority: Priority.high,
+);
+const NotificationDetails notificationDetails =
+    NotificationDetails(android: androidDetails);
+
 class Store {
   static Store of(BuildContext context) => StoreProvider.of(context).store;
 
@@ -191,9 +202,19 @@ WHERE m2.timestamp IS NULL;""");
     // await prefs.setString(_kPrefUserNamePrefix + "User3", "Daisy");
     // await prefs.setString(_kPrefUserNamePrefix + "User4", "Jenifer");
 
+    // Initialise notifications plugin
+    FlutterLocalNotificationsPlugin notifications =
+        FlutterLocalNotificationsPlugin();
+    const AndroidInitializationSettings initialisationSettingsAndroid =
+        AndroidInitializationSettings("ic_stat_app");
+    const InitializationSettings initialisationSettings =
+        InitializationSettings(android: initialisationSettingsAndroid);
+    await notifications.initialize(initialisationSettings);
+
     return Store._(
       db: db,
       prefs: prefs,
+      notifications: notifications,
       channels: initialChannels,
       currentId: currentId,
       currentName: currentName,
@@ -202,6 +223,7 @@ WHERE m2.timestamp IS NULL;""");
 
   final Database db;
   final SharedPreferences prefs;
+  final FlutterLocalNotificationsPlugin notifications;
   final Map<String, String> _channels;
   final BehaviorSubject<Map<String, String>> _channelsSubject;
 
@@ -211,12 +233,13 @@ WHERE m2.timestamp IS NULL;""");
   final BehaviorSubject<String> _currentNameSubject;
   final BehaviorSubject<int> _connectedDevicesSubject;
 
-  MeshClient _mesh;
+  MeshClient mesh;
   MessengerClient messenger;
 
   Store._({
     @required this.db,
     @required this.prefs,
+    @required this.notifications,
     @required Map<String, String> channels,
     @required this.currentId,
     @required String currentName,
@@ -226,14 +249,14 @@ WHERE m2.timestamp IS NULL;""");
         _messageCallbacks = {},
         _currentNameSubject = BehaviorSubject.seeded(currentName),
         _connectedDevicesSubject = BehaviorSubject<int>.seeded(null) {
-    _mesh = MeshClient(currentId, _onConnectedDevicesChanged);
-    _mesh.initialise().then((_) => _mesh.start());
-    messenger = MessengerClient(currentId, currentName, _mesh);
+    mesh = MeshClient(currentId, _onConnectedDevicesChanged);
+    mesh.initialise().then((_) => mesh.start());
+    messenger = MessengerClient(currentId, currentName, mesh);
     print("Set up messenger");
 
     messenger.registerOnMessageReceivedCallback(_onMessageReceived);
   }
-  
+
   void _onConnectedDevicesChanged(int devices) {
     _connectedDevicesSubject.add(devices);
   }
@@ -290,6 +313,16 @@ WHERE m2.timestamp IS NULL;""");
         toId: msg.dstName,
         data: decoded,
       ));
+
+      // Only show notification when it's not from us
+      if(msg.srcName != currentId) {
+        await notifications.show(
+          0,
+          nameForChannelId(prefs, msg.dstName),
+          msg.contents.startsWith("geo:") ? "Shared Location" : msg.contents,
+          notificationDetails,
+        );
+      }
     }
   }
 
@@ -320,7 +353,8 @@ WHERE m2.timestamp IS NULL;""");
           if (i == -1) {
             messages.insert(0, entry.value);
           } else {
-            print("[Store] Tried to insert message ${entry.value.id} again, ignoring...");
+            print(
+                "[Store] Tried to insert message ${entry.value.id} again, ignoring...");
           }
         } else
         /*update*/ {
