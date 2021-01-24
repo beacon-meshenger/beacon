@@ -130,11 +130,12 @@ class Store {
 
   static Future<Store> createStore() async {
     print("[Store] Creating store...");
+
+    // Initialise message database
     final path = join(await getDatabasesPath(), "store.db");
     final db = await openDatabase(path, version: 1, onCreate: _initDatabase);
     final prefs = await SharedPreferences.getInstance();
     print((await db.query(_kMessageTable)).join("\n"));
-
     final initialChannelsQuery =
         await db.rawQuery("""SELECT m1.channelId, m1.data
 FROM message m1 LEFT JOIN message m2
@@ -166,15 +167,14 @@ WHERE m2.timestamp IS NULL;""");
   final Map<String, String> _channels;
   final BehaviorSubject<Map<String, String>> _channelsSubject;
   final Map<String, ValueChanged<Message>> _newMessageCallbacks;
-  final String _currentId;
-  String _currentName;
+  final String currentId;
   final BehaviorSubject<String> _currentNameSubject;
 
   Store._({
     @required this.db,
     @required this.prefs,
     @required Map<String, String> channels,
-    @required String currentId,
+    @required this.currentId,
     @required String currentName,
   })  : _channels = channels,
         _channelsSubject =
@@ -224,7 +224,7 @@ WHERE m2.timestamp IS NULL;""");
     final channelId = _channelId(
       fromId: message.fromId,
       toId: message.toId,
-      currentId: _currentId,
+      currentId: currentId,
     );
     print("[Store] Handling channel \"$channelId\" message ${message.id}...");
     _channels[channelId] = message.data;
@@ -235,7 +235,7 @@ WHERE m2.timestamp IS NULL;""");
       _newMessageCallbacks[channelId](message);
     }
 
-    await db.insert(_kMessageTable, message.toMap(currentId: _currentId));
+    await db.insert(_kMessageTable, message.toMap(currentId: currentId));
   }
 
   Future<void> handleNameChange(String name) async {

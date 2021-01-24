@@ -101,13 +101,7 @@ class ChatApp extends StatelessWidget {
           brightness: Brightness.dark,
           primarySwatch: Colors.deepOrange,
           accentColor: Colors.deepOrange,
-          // primarySwatch: Colors.pink,
-          // accentColor: Colors.pink,
         ),
-        // theme: ThemeData.light(),
-        // theme: ThemeData(
-        //   primarySwatch: Colors.blue,
-        // ),
         home: HomePage(),
       ),
     );
@@ -130,12 +124,15 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text("Beacon"),
         actions: [
-          IconButton(icon: Icon(Icons.qr_code), onPressed: () {
-            Navigator.push(context, new MaterialPageRoute(builder: (context) {
-              return new QRCodePage();
-            }));
-          })
-        ]
+          IconButton(
+            icon: Icon(Icons.qr_code),
+            onPressed: () {
+              Navigator.push(context, new MaterialPageRoute(builder: (context) {
+                return new QRCodePage();
+              }));
+            },
+          )
+        ],
       ),
       body: StreamBuilder<String>(
         stream: store.name(),
@@ -286,7 +283,7 @@ class _ChatPageState extends State<ChatPage> {
       ),
       body: SafeArea(
         child: MessageList(
-          currentUserId: "UserMe", // TODO: dynamic from store probably
+          currentUserId: store.currentId,
           messages: _messages,
           onMessageSend: (newMessage) {
             // TODO: Send the message, and also store it
@@ -325,7 +322,7 @@ class _QRCodePageState extends State<QRCodePage> {
     scanned = '';
   }
 
-  Future _getPublicKey () async {
+  Future _getPublicKey() async {
     SharedPreferences _prefs = await SharedPreferences.getInstance();
     setState(() {
       publicKey = _prefs.getString('publicKey');
@@ -341,30 +338,31 @@ class _QRCodePageState extends State<QRCodePage> {
         title: const Text("Beacon"),
       ),
       body: SafeArea(
-        child: Center (
-          child: Column (
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [QRCode(
-            publicKey: publicKey,
-            ),
-          ]
-          )
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (publicKey != null) QRCode(publicKey: publicKey),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           String scanVal = await qrScan(theme.accentColor);
+          // -1 indicates scan was cancelled
+          if (scanVal == "-1") return;
           SharedPreferences _prefs = await SharedPreferences.getInstance();
           var keys = _prefs.getStringList('keys');
-          if ( keys == null ) keys = [];
+          if (keys == null) keys = [];
           if (!keys.contains(scanVal)) {
             keys.add(scanVal);
             _prefs.setStringList('keys', keys);
           }
         },
         tooltip: 'Add user',
-        child: const Icon(Icons.qr_code_scanner)
+        child: const Icon(Icons.qr_code_scanner),
       ),
     );
   }
