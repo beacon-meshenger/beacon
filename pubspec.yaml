@@ -61,6 +61,9 @@ flutter:
   assets:
     - assets/logo.svg
     - assets/logo.riv
+    - assets/logot.png
+    - assets/logo.png
+    - assets/logoround.png
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

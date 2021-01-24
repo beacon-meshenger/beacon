@@ -15,6 +15,7 @@ class QRCode extends StatelessWidget {
         data: publicKey,
         version: QrVersions.auto,
         backgroundColor: Colors.white,
+        embeddedImage: AssetImage('assets/logoround.png'),
         errorStateBuilder: (cxt, err) {
           return Container(
             child: Center(

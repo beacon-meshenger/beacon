@@ -44,6 +44,26 @@ class _QRCodePageState extends State<QRCodePage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               if (publicKey != null) QRCode(publicKey: publicKey),
+              Container(
+                padding: const EdgeInsets.all(16.0),
+                child: StreamBuilder<String>(
+                    stream: store.name(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data.isNotEmpty) {
+                        return Text(
+                          snapshot.data + "'s QR Code",
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+                        );
+                      } else {
+                        return Text("Name loading...");
+                    }
+                  },
+                ),
+              ),
+              Text(
+                "Let your friends scan this to add you!",
+                style: TextStyle(fontSize: 16),
+              )
             ],
           ),
         ),
