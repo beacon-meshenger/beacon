@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 const _avatarTextStyle = TextStyle(color: Colors.white);
 
+
+
 class Avatar extends StatelessWidget {
   final String user;
   final Color color;
