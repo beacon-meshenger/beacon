@@ -114,9 +114,14 @@ class MessengerClient {
 
     if (message.dstName == clientName) {
       // This message is for us!!! No need to do any forwarding
-      if (message.type != "DMAck") {
+      if (message.type == "DMKey") {
+        sendKeyAck(message.srcName, message.uuid);
+      } else if (message.type != "DMAck" && message.type != "DMKeyAck") {
         sendDirectAck(message.srcName, message.uuid);
       }
+
+
+
       for (OnMessageReceived callback in onMessageReceivedCallbacks) {
         callback(message);
       }
@@ -183,6 +188,13 @@ class MessengerClient {
 
     onPayLoadReceive(clientName, payload);
 
+    return uuid;
+  }
+
+  String sendKeyAck(String dstName, String originalUUID) {
+    String uuid = UUID.v4();
+    Uint8List payload = new DMMessage(uuid, clientName, dstName, clientNickname, "DMKeyAck", originalUUID).encode();
+    onPayLoadReceive(clientName, payload);
     return uuid;
   }
 
