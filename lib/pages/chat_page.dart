@@ -261,6 +261,7 @@ class _MessageListState extends State<_MessageList> {
                   ),
                   IconButton(
                     icon: Icon(Icons.send),
+                    tooltip: "Send",
                     color: theme.accentColor,
                     onPressed: _controller.text.isEmpty ? null : _onSendClick,
                   ),

@@ -250,11 +250,17 @@ WHERE m2.timestamp IS NULL;""");
       messages = maps.map((map) => Message.fromMap(map, prefs: prefs)).toList();
       controller.add(UnmodifiableListView(messages));
       _messageCallbacks[channelId] = (MapEntry<bool, Message> entry) {
-        if (entry.key) {
-          messages.insert(0, entry.value);
-        } else {
-          final i =
-              messages.indexWhere((element) => element.id == entry.value.id);
+        final i =
+            messages.indexWhere((element) => element.id == entry.value.id);
+        if (entry.key /*create*/) {
+          // Make sure we haven't inserted this message before
+          if (i == -1) {
+            messages.insert(0, entry.value);
+          } else {
+            print("[Store] Tried to insert message ${entry.value.id} again, ignoring...");
+          }
+        } else
+        /*update*/ {
           // The old thing we are allowed to update is acknowledged
           messages[i].acknowledged = entry.value.acknowledged;
         }
@@ -283,7 +289,11 @@ WHERE m2.timestamp IS NULL;""");
       data: contents,
       acknowledged: false,
     ));
-    Future.delayed(const Duration(seconds: 2), () => acknowledgeMessage(channelId, id));
+    // TODO: remove this once we add acknowledgement properly
+    Future.delayed(
+      const Duration(seconds: 2),
+      () => acknowledgeMessage(channelId, id),
+    );
   }
 
   Future<void> handleMessage(Message message) async {
@@ -293,6 +303,7 @@ WHERE m2.timestamp IS NULL;""");
       currentId: currentId,
     );
     print("[Store] Handling channel \"$channelId\" message ${message.id}...");
+    // Update last message for channel
     _channels[channelId] = message.data;
     _channelsSubject.add(UnmodifiableMapView(this._channels));
 
@@ -301,7 +312,11 @@ WHERE m2.timestamp IS NULL;""");
       _messageCallbacks[channelId](MapEntry(true /*create*/, message));
     }
 
-    await db.insert(_kMessageTable, message.toMap(currentId: currentId));
+    try {
+      await db.insert(_kMessageTable, message.toMap(currentId: currentId));
+    } catch (e) {
+      print("[Store] Error inserting into database: $e");
+    }
   }
 
   Future<void> acknowledgeMessage(String channelId, String messageId) async {
