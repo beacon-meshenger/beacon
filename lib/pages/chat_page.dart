@@ -77,6 +77,17 @@ const _receivedRadius = BorderRadius.only(
 );
 const _timestampTextStyle = TextStyle(color: Colors.grey, fontSize: 12.0);
 
+const _avatarColors = [
+  Colors.deepOrange,
+  Colors.amber,
+  Colors.blueAccent,
+  Colors.cyanAccent,
+  Colors.deepPurple,
+  Colors.greenAccent,
+  Colors.pinkAccent,
+  Colors.tealAccent,
+];
+
 class _Message extends StatelessWidget {
   final String currentUserId;
   final Message message;
@@ -111,6 +122,7 @@ class _Message extends StatelessWidget {
 
     final isLocation = message.data.startsWith("geo:");
     final fromName = message.fromName(store.prefs);
+    final unacked = store.unackedMessages.contains(message.id);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -121,7 +133,7 @@ class _Message extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 18.0),
               child: Avatar(
                 user: fromName[0],
-                color: theme.accentColor,
+                color: _avatarColors[message.fromId.hashCode % _avatarColors.length],
               ),
             )
           else
@@ -136,7 +148,7 @@ class _Message extends StatelessWidget {
               children: [
                 AnimatedOpacity(
                   duration: const Duration(milliseconds: 500),
-                  opacity: !received && !message.acknowledged ? 0.5 : 1.0,
+                  opacity: !received && unacked ? 0.5 : 1.0,
                   child: GestureDetector(
                     onTap: isLocation ? _launchMessage : null,
                     child: Container(
@@ -156,7 +168,7 @@ class _Message extends StatelessWidget {
                         bottom: endOfThread ? 4.0 : 0.0,
                       ),
                       child: Text(
-                        isLocation ? "Shared Location" : message.data,
+                        isLocation ? "🌍 Shared Location" : message.data,
                         style: TextStyle(
                           color: received ? null : Colors.white,
                           height: 1.4,
@@ -173,7 +185,7 @@ class _Message extends StatelessWidget {
                         (received
                             ? ""
                             : (", " +
-                                (message.acknowledged ? "Received" : "Sent"))),
+                                (unacked ? "Sent" : "Received"))),
                     style: _timestampTextStyle,
                     textAlign: textAlign,
                   ),

@@ -79,16 +79,13 @@ class Message {
   final String fromId;
   final String toId;
   final String data;
-  bool acknowledged;
 
-  Message({
-    @required this.id,
-    @required this.timestamp,
-    @required this.fromId,
-    @required this.toId,
-    @required this.data,
-    this.acknowledged = true,
-  });
+  Message(
+      {@required this.id,
+      @required this.timestamp,
+      @required this.fromId,
+      @required this.toId,
+      @required this.data});
 
   Map<String, dynamic> toMap({@required String currentId}) {
     return {
@@ -233,6 +230,8 @@ WHERE m2.timestamp IS NULL;""");
   final BehaviorSubject<String> _currentNameSubject;
   final BehaviorSubject<int> _connectedDevicesSubject;
 
+  final Set<String> unackedMessages;
+
   MeshClient mesh;
   MessengerClient messenger;
 
@@ -248,7 +247,8 @@ WHERE m2.timestamp IS NULL;""");
             BehaviorSubject.seeded(UnmodifiableMapView(channels)),
         _messageCallbacks = {},
         _currentNameSubject = BehaviorSubject.seeded(currentName),
-        _connectedDevicesSubject = BehaviorSubject<int>.seeded(null) {
+        _connectedDevicesSubject = BehaviorSubject<int>.seeded(null),
+        unackedMessages = Set<String>() {
     mesh = MeshClient(currentId, _onConnectedDevicesChanged);
     mesh.initialise().then((_) => mesh.start());
     messenger = MessengerClient(currentId, currentName, mesh);
@@ -315,11 +315,11 @@ WHERE m2.timestamp IS NULL;""");
       ));
 
       // Only show notification when it's not from us
-      if(msg.srcName != currentId) {
+      if (msg.srcName != currentId) {
         await notifications.show(
           0,
           nameForChannelId(prefs, msg.dstName),
-          msg.contents.startsWith("geo:") ? "Shared Location" : msg.contents,
+          msg.contents.startsWith("geo:") ? "🌍 Shared Location" : msg.contents,
           notificationDetails,
         );
       }
@@ -346,9 +346,9 @@ WHERE m2.timestamp IS NULL;""");
       messages = maps.map((map) => Message.fromMap(map, prefs: prefs)).toList();
       controller.add(UnmodifiableListView(messages));
       _messageCallbacks[channelId] = (MapEntry<bool, Message> entry) {
-        final i =
-            messages.indexWhere((element) => element.id == entry.value.id);
         if (entry.key /*create*/) {
+          final i =
+              messages.indexWhere((element) => element.id == entry.value.id);
           // Make sure we haven't inserted this message before
           if (i == -1) {
             messages.insert(0, entry.value);
@@ -356,10 +356,6 @@ WHERE m2.timestamp IS NULL;""");
             print(
                 "[Store] Tried to insert message ${entry.value.id} again, ignoring...");
           }
-        } else
-        /*update*/ {
-          // The old thing we are allowed to update is acknowledged
-          messages[i].acknowledged = entry.value.acknowledged;
         }
         controller.add(UnmodifiableListView(messages));
       };
@@ -389,13 +385,13 @@ WHERE m2.timestamp IS NULL;""");
       String key = prefs.getString('key:$channelId');
       id = messenger.sendDirectTextMessage(channelId, contents, parsePublicKeyFromPem(key));
     }
+    unackedMessages.add(id);
     await handleMessage(Message(
       id: id,
       timestamp: DateTime.now(),
       fromId: currentId,
       toId: channelId,
       data: contents,
-      acknowledged: false,
     ));
   }
 
@@ -423,20 +419,12 @@ WHERE m2.timestamp IS NULL;""");
   }
 
   Future<void> acknowledgeMessage(String channelId, String messageId) async {
+    unackedMessages.remove(messageId);
     if (_messageCallbacks.containsKey(channelId)) {
       print(
           "[Store] Notifying \"$channelId\" callback about $messageId acknowledgement...");
       _messageCallbacks[channelId](MapEntry(
-        false /*update*/,
-        Message(
-          id: messageId,
-          acknowledged: true,
-          // These will be ignored in the update (this is pretty horrible, but it works)
-          timestamp: null,
-          fromId: null,
-          toId: null,
-          data: null,
-        ),
+        false /*update*/, null,
       ));
     }
 
