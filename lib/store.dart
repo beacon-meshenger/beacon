@@ -308,7 +308,7 @@ WHERE m2.timestamp IS NULL;""");
         await notifications.show(
           0,
           nameForChannelId(prefs, msg.dstName),
-          msg.contents.startsWith("geo:") ? "Shared Location" : msg.contents,
+          msg.contents.startsWith("geo:") ? "🌍 Shared Location" : msg.contents,
           notificationDetails,
         );
       }
