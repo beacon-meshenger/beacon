@@ -35,7 +35,18 @@ String _channelId({
           : fromId;
 }
 
-const _kUserPrefix = "user:";
+const _kPrefCurrentId = "me:id";
+const _kPrefCurrentName = "me:name";
+const _kPrefUserNamePrefix = "user:";
+
+String _nameForId(SharedPreferences prefs, String userId) {
+  final key = _kPrefUserNamePrefix + userId;
+  if (prefs.containsKey(key)) {
+    return prefs.getString(key);
+  } else {
+    return "Unknown";
+  }
+}
 
 const _kMessageTable = "message";
 const _kMessageKeyId = "id";
@@ -77,15 +88,17 @@ class Message {
     };
   }
 
-  factory Message.fromMap(Map<String, dynamic> map,
-      {@required SharedPreferences prefs}) {
+  factory Message.fromMap(
+    Map<String, dynamic> map, {
+    @required SharedPreferences prefs,
+  }) {
     return Message(
       id: map[_kMessageKeyId],
       timestamp: DateTime.fromMillisecondsSinceEpoch(
-          map[_kMessageKeyTimestamp] * 1000),
+        map[_kMessageKeyTimestamp] * 1000,
+      ),
       fromId: map[_kMessageKeyFromId],
-      // fromName: prefs.get(_kUserPrefix + map[_kMessageKeyFromId]), // TODO: use this instead
-      fromName: map[_kMessageKeyFromId],
+      fromName: _nameForId(prefs, map[_kMessageKeyFromId]),
       toId: map[_kMessageKeyToId],
       data: map[_kMessageKeyData],
     );
@@ -127,13 +140,25 @@ class Store {
 FROM message m1 LEFT JOIN message m2
 ON (m1.channelId = m2.channelId AND m1.timestamp < m2.timestamp)
 WHERE m2.timestamp IS NULL;""");
-    final initialChannels = new SplayTreeMap<String, String>.fromIterable(
+    final initialChannels = SplayTreeMap<String, String>.fromIterable(
       initialChannelsQuery,
       key: (map) => map["channelId"],
       value: (map) => map["data"],
     );
 
-    return Store._(db: db, prefs: prefs, initialChannels: initialChannels);
+    // TODO: maybe move key init to here to?
+
+    final currentId = "UserMe"; // TODO: dynamic (store with `_kPrefCurrentId`)
+    final currentName = prefs.containsKey(_kPrefCurrentName) ? prefs.getString(_kPrefCurrentName) : "";
+    print("ID: $currentId Name: $currentName");
+
+    return Store._(
+      db: db,
+      prefs: prefs,
+      channels: initialChannels,
+      currentId: currentId,
+      currentName: currentName,
+    );
   }
 
   final Database db;
@@ -141,16 +166,23 @@ WHERE m2.timestamp IS NULL;""");
   final Map<String, String> _channels;
   final BehaviorSubject<Map<String, String>> _channelsSubject;
   final Map<String, ValueChanged<Message>> _newMessageCallbacks;
-  final String currentId = "UserMe"; // TODO: dynamic
+  final String _currentId;
+  String _currentName;
+  final BehaviorSubject<String> _currentNameSubject;
 
   Store._({
     @required this.db,
     @required this.prefs,
-    @required Map<String, String> initialChannels,
-  })  : _channels = initialChannels,
+    @required Map<String, String> channels,
+    @required String currentId,
+    @required String currentName,
+  })  : _channels = channels,
         _channelsSubject =
-            BehaviorSubject.seeded(UnmodifiableMapView(initialChannels)),
-        _newMessageCallbacks = {};
+            BehaviorSubject.seeded(UnmodifiableMapView(channels)),
+        _newMessageCallbacks = {},
+        _currentId = currentId,
+        _currentName = currentName,
+        _currentNameSubject = BehaviorSubject.seeded(currentName);
 
   Stream<Map<String, String>> channels() {
     print("[Store] Subscribing to all channels...");
@@ -183,11 +215,16 @@ WHERE m2.timestamp IS NULL;""");
     return controller.stream;
   }
 
+  Stream<String> name() {
+    print("[Store] Subscribing to name...");
+    return _currentNameSubject.stream;
+  }
+
   Future<void> handleMessage(Message message) async {
     final channelId = _channelId(
       fromId: message.fromId,
       toId: message.toId,
-      currentId: currentId,
+      currentId: _currentId,
     );
     print("[Store] Handling channel \"$channelId\" message ${message.id}...");
     _channels[channelId] = message.data;
@@ -198,6 +235,12 @@ WHERE m2.timestamp IS NULL;""");
       _newMessageCallbacks[channelId](message);
     }
 
-    await db.insert(_kMessageTable, message.toMap(currentId: currentId));
+    await db.insert(_kMessageTable, message.toMap(currentId: _currentId));
+  }
+
+  Future<void> handleNameChange(String name) async {
+    _currentName = name;
+    _currentNameSubject.add(name);
+    await prefs.setString(_kPrefCurrentName, name);
   }
 }
