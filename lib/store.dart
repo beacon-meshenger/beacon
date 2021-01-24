@@ -70,6 +70,7 @@ class Message {
   String fromName;
   final String toId;
   final String data;
+  bool acknowledged;
 
   Message({
     @required this.id,
@@ -78,6 +79,7 @@ class Message {
     this.fromName = "?",
     @required this.toId,
     @required this.data,
+    this.acknowledged = true,
   });
 
   Map<String, dynamic> toMap({@required String currentId}) {
@@ -127,7 +129,7 @@ class Store {
       $_kMessageKeyToId TEXT,
       $_kMessageKeyData TEXT
     )
-    """);
+    """); // TODO: probably ought to store acknowledged in here, current just assume all stored messages acked
     batch.execute("""
     CREATE INDEX ${_kMessageTable}_${_kMessageKeyTimestamp}_$_kMessageKeyChannelId
     ON $_kMessageTable ($_kMessageKeyTimestamp, $_kMessageKeyChannelId)
@@ -168,7 +170,9 @@ WHERE m2.timestamp IS NULL;""");
     }
 
     final currentId = "UserMe"; // TODO: dynamic (derive from public key?)
-    final currentName = prefs.containsKey(_kPrefCurrentName) ? prefs.getString(_kPrefCurrentName) : "";
+    final currentName = prefs.containsKey(_kPrefCurrentName)
+        ? prefs.getString(_kPrefCurrentName)
+        : "";
     print("ID: $currentId Name: $currentName");
 
     return Store._(
@@ -184,7 +188,9 @@ WHERE m2.timestamp IS NULL;""");
   final SharedPreferences prefs;
   final Map<String, String> _channels;
   final BehaviorSubject<Map<String, String>> _channelsSubject;
-  final Map<String, ValueChanged<Message>> _newMessageCallbacks;
+
+  // Send <true, msg> for new message, <false, msg> for updated
+  final Map<String, ValueChanged<MapEntry<bool, Message>>> _messageCallbacks;
   final String currentId;
   final BehaviorSubject<String> _currentNameSubject;
 
@@ -200,7 +206,7 @@ WHERE m2.timestamp IS NULL;""");
   })  : _channels = channels,
         _channelsSubject =
             BehaviorSubject.seeded(UnmodifiableMapView(channels)),
-        _newMessageCallbacks = {},
+        _messageCallbacks = {},
         _currentNameSubject = BehaviorSubject.seeded(currentName) {
     _mesh = MeshClient(currentId);
     _messenger = MessengerClient(currentId, currentName, _mesh);
@@ -243,13 +249,20 @@ WHERE m2.timestamp IS NULL;""");
       );
       messages = maps.map((map) => Message.fromMap(map, prefs: prefs)).toList();
       controller.add(UnmodifiableListView(messages));
-      _newMessageCallbacks[channelId] = (newMessage) {
-        messages.insert(0, newMessage);
+      _messageCallbacks[channelId] = (MapEntry<bool, Message> entry) {
+        if (entry.key) {
+          messages.insert(0, entry.value);
+        } else {
+          final i =
+              messages.indexWhere((element) => element.id == entry.value.id);
+          // The old thing we are allowed to update is acknowledged
+          messages[i].acknowledged = entry.value.acknowledged;
+        }
         controller.add(UnmodifiableListView(messages));
       };
     }, onCancel: () async {
       print("[Store] Cancelling subscription to \"$channelId\" messages...");
-      _newMessageCallbacks.remove(channelId);
+      _messageCallbacks.remove(channelId);
       controller.close();
     });
     return controller.stream;
@@ -268,7 +281,9 @@ WHERE m2.timestamp IS NULL;""");
       fromId: currentId,
       toId: channelId,
       data: contents,
+      acknowledged: false,
     ));
+    Future.delayed(const Duration(seconds: 2), () => acknowledgeMessage(channelId, id));
   }
 
   Future<void> handleMessage(Message message) async {
@@ -281,12 +296,33 @@ WHERE m2.timestamp IS NULL;""");
     _channels[channelId] = message.data;
     _channelsSubject.add(UnmodifiableMapView(this._channels));
 
-    if (_newMessageCallbacks.containsKey(channelId)) {
+    if (_messageCallbacks.containsKey(channelId)) {
       print("[Store] Notifying \"$channelId\" callback about ${message.id}...");
-      _newMessageCallbacks[channelId](message);
+      _messageCallbacks[channelId](MapEntry(true /*create*/, message));
     }
 
     await db.insert(_kMessageTable, message.toMap(currentId: currentId));
+  }
+
+  Future<void> acknowledgeMessage(String channelId, String messageId) async {
+    if (_messageCallbacks.containsKey(channelId)) {
+      print(
+          "[Store] Notifying \"$channelId\" callback about $messageId acknowledgement...");
+      _messageCallbacks[channelId](MapEntry(
+        false /*update*/,
+        Message(
+          id: messageId,
+          acknowledged: true,
+          // These will be ignored in the update (this is pretty horrible, but it works)
+          timestamp: null,
+          fromId: null,
+          toId: null,
+          data: null,
+        ),
+      ));
+    }
+
+    // TODO: if we are going to be persisting acknowledgement (as opposed to just defaulting to true), store in db here
   }
 
   Future<void> handleNameChange(String name) async {

@@ -114,32 +114,42 @@ class _Message extends StatelessWidget {
               crossAxisAlignment:
                   received ? CrossAxisAlignment.start : CrossAxisAlignment.end,
               children: [
-                Container(
-                  // margin: const EdgeInsets.symmetric(vertical: 4.0),
-                  constraints: BoxConstraints(maxWidth: size.width * 2 / 3),
-                  decoration: BoxDecoration(
-                    color: received
-                        ? (theme.brightness == Brightness.light
-                            ? Colors.grey[200]
-                            : Colors.grey[800])
-                        : theme.accentColor,
-                    borderRadius: received ? _receivedRadius : _sentRadius,
-                  ),
-                  padding: const EdgeInsets.all(8.0),
-                  margin: EdgeInsets.only(
-                    top: 4.0,
-                    bottom: endOfThread ? 4.0 : 0.0,
-                  ),
-                  child: Text(
-                    message.data,
-                    style: TextStyle(
-                        color: received ? null : Colors.white, height: 1.4),
-                    textAlign: textAlign,
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 500),
+                  opacity: !received && !message.acknowledged ? 0.5 : 1.0,
+                  child: Container(
+                    // margin: const EdgeInsets.symmetric(vertical: 4.0),
+                    constraints: BoxConstraints(maxWidth: size.width * 2 / 3),
+                    decoration: BoxDecoration(
+                      color: received
+                          ? (theme.brightness == Brightness.light
+                              ? Colors.grey[200]
+                              : Colors.grey[800])
+                          : theme.accentColor,
+                      borderRadius: received ? _receivedRadius : _sentRadius,
+                    ),
+                    padding: const EdgeInsets.all(8.0),
+                    margin: EdgeInsets.only(
+                      top: 4.0,
+                      bottom: endOfThread ? 4.0 : 0.0,
+                    ),
+                    child: Text(
+                      message.data,
+                      style: TextStyle(
+                        color: received ? null : Colors.white,
+                        height: 1.4,
+                      ),
+                      textAlign: textAlign,
+                    ),
                   ),
                 ),
                 if (endOfThread)
                   Text(
-                    _dateFormat.format(message.timestamp),
+                    _dateFormat.format(message.timestamp) +
+                        (received
+                            ? ""
+                            : (", " +
+                                (message.acknowledged ? "Received" : "Sent"))),
                     style: _timestampTextStyle,
                     textAlign: textAlign,
                   ),
@@ -201,6 +211,7 @@ class _MessageListState extends State<_MessageList> {
           child: ListView.builder(
             itemBuilder: (context, i) {
               return _Message(
+                key: ValueKey(widget.messages[i].id),
                 currentUserId: widget.currentUserId,
                 message: widget.messages[i],
                 nextMessage: i > 0 ? widget.messages[i - 1] : null,
