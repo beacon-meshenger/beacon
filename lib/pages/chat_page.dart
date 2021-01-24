@@ -111,6 +111,7 @@ class _Message extends StatelessWidget {
 
     final isLocation = message.data.startsWith("geo:");
     final fromName = message.fromName(store.prefs);
+    final unacked = store.unackedMessages.contains(message.id);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -136,7 +137,7 @@ class _Message extends StatelessWidget {
               children: [
                 AnimatedOpacity(
                   duration: const Duration(milliseconds: 500),
-                  opacity: !received && !message.acknowledged ? 0.5 : 1.0,
+                  opacity: !received && unacked ? 0.5 : 1.0,
                   child: GestureDetector(
                     onTap: isLocation ? _launchMessage : null,
                     child: Container(
@@ -173,7 +174,7 @@ class _Message extends StatelessWidget {
                         (received
                             ? ""
                             : (", " +
-                                (message.acknowledged ? "Received" : "Sent"))),
+                                (unacked ? "Sent" : "Received"))),
                     style: _timestampTextStyle,
                     textAlign: textAlign,
                   ),
