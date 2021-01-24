@@ -248,6 +248,23 @@ WHERE m2.timestamp IS NULL;""");
         ),
         msg.contents,
       );
+    } else if (msg.type == "DMKey") {
+      final decoder = new JsonDecoder();
+
+      var decode = decoder.convert(msg.contents);
+
+      String key = decode['publicKey'];
+      String name = decode['name'];
+
+      await prefs.setString("user:${msg.srcName}", name);
+
+      var keys = prefs.getStringList('keys');
+      if (keys == null) keys = [];
+      if (!keys.contains(key)) {
+        keys.add(key);
+        await prefs.setStringList('keys', keys);
+      }
+
     } else {
       // if (msg.type == "BroadcastText") {
       await prefs.setString("user:${msg.srcName}", msg.srcNickname);
