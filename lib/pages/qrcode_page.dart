@@ -2,6 +2,7 @@ import 'package:chat/widgets/qrcode.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../crypto.dart';
 
 import '../store.dart';
 
@@ -91,38 +92,57 @@ class _QRCodePageState extends State<QRCodePage> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          String scanVal = await qrScan(theme.accentColor);
-          // -1 indicates scan was cancelled
-          if (scanVal == "-1") return;
-          // Decode json
-          final decoder = new JsonDecoder();
-          var decodedScanval = decoder.convert(scanVal);
+      floatingActionButton: StreamBuilder<String>(
+        stream: store.name(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData && snapshot.data.isNotEmpty) {
+            return FloatingActionButton(
+              onPressed: () async {
+                String scanVal = await qrScan(theme.accentColor);
+                // -1 indicates scan was cancelled
+                if (scanVal == "-1") return;
+                // Decode json
+                final decoder = new JsonDecoder();
+                var decodedScanval = decoder.convert(scanVal);
 
-          print(decodedScanval['name']);
-          print(decodedScanval['publicKey']);
+                print(decodedScanval['name']);
+                print(decodedScanval['publicKey']);
 
-          if (decodedScanval['name'] && decodedScanval['publicKey']) {
-            // save name
-            await store.prefs.setStringList('user:${userIdFromPublicKey(decodedScanval['publicKey'])}', decodedScanval['name']);
+                if (decodedScanval['name'] && decodedScanval['publicKey']) {
+                  // save name
+                  await store.prefs.setStringList('user:${userIdFromPublicKey(decodedScanval['publicKey'])}', decodedScanval['name']);
 
-            var keys = store.prefs.getStringList('keys');
-            if (keys == null) keys = [];
-            if (!keys.contains(decodedScanval['publicKey'])) {
-              keys.add(decodedScanval['publicKey']);
-              await store.prefs.setStringList('keys', keys);
-            }
+                  var keys = store.prefs.getStringList('keys');
+                  if (keys == null) keys = [];
+                  if (!keys.contains(decodedScanval['publicKey'])) {
+                    keys.add(decodedScanval['publicKey']);
+                    await store.prefs.setStringList('keys', keys);
+                  }
+                }
+                // TODO add send code
+                final encoder = new JsonEncoder();
+
+                store.messenger.sendKey(
+                    userIdFromPublicKey(decodedScanval['publicKey']),
+                    parsePublicKeyFromPem(decodedScanval['publicKey']),
+                    encoder.convert({
+                      'name': snapshot.data,
+                      'publicKey': publicKey
+                    })
+                );
+
+
+                // Successfully added
+                scaffoldState.currentState.showSnackBar(new SnackBar(content: new Text(decodedScanval['name'])));
+              },
+
+              tooltip: 'Add user',
+              child: const Icon(Icons.qr_code_scanner),
+            );
+          } else {
+            return FloatingActionButton();
           }
-          // TODO add send code
-
-
-          // Successfully added
-          scaffoldState.currentState.showSnackBar(new SnackBar(content: new Text(decodedScanval['name'])));
         },
-
-        tooltip: 'Add user',
-        child: const Icon(Icons.qr_code_scanner),
       ),
     );
   }
