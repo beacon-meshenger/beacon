@@ -314,8 +314,8 @@ WHERE m2.timestamp IS NULL;""");
         data: decoded,
       ));
 
-      // Only show notification when it's not from us
-      if (msg.srcName != currentId) {
+      // Only show notification when it's not from us, and we're not in the destination channel
+      if (msg.srcName != currentId && !_messageCallbacks.containsKey(msg.dstName)) {
         await notifications.show(
           0,
           nameForChannelId(prefs, msg.dstName),
