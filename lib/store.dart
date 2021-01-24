@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:path/path.dart';
 import 'package:flutter/material.dart';
@@ -248,6 +249,12 @@ WHERE m2.timestamp IS NULL;""");
         ),
         msg.contents,
       );
+    } else if (msg.type == "DMKeyAck") {
+      print('Keys receieved by recipient');
+      // Send message to create channel
+
+
+
     } else if (msg.type == "DMKey") {
       var unencrypted = rsaDecrypt(parsePrivateKeyFromPem(prefs.getString('privateKey')), base64.decode(msg.contents));
 
@@ -260,23 +267,28 @@ WHERE m2.timestamp IS NULL;""");
 
       await prefs.setString("user:${msg.srcName}", name);
 
-      var keys = prefs.getStringList('keys');
-      if (keys == null) keys = [];
-      if (!keys.contains(key)) {
-        keys.add(key);
-        await prefs.setStringList('keys', keys);
-      }
+      await prefs.setString("key:${msg.srcName}", key);
+
+      String displayName = prefs.getString('user:${msg.srcName}');
+
+      sendMessage(
+          msg.srcName,
+          'Hi $displayName!\nGlad to be connected on Beacon!'
+      );
 
     } else {
       // if (msg.type == "BroadcastText") {
       await prefs.setString("user:${msg.srcName}", msg.srcNickname);
       // }
+      Uint8List unencrypted = rsaDecrypt(parsePrivateKeyFromPem(prefs.getString('privateKey')), base64.decode(msg.contents));
+      String decoded = utf8.decode(unencrypted);
+
       await handleMessage(Message(
         id: msg.uuid,
         timestamp: DateTime.now(),
         fromId: msg.srcName,
         toId: msg.dstName,
-        data: msg.contents,
+        data: decoded,
       ));
     }
   }
@@ -340,7 +352,8 @@ WHERE m2.timestamp IS NULL;""");
     if (channelId.isEmpty) {
       id = messenger.sendBroadcast(contents);
     } else {
-      id = messenger.sendDirectTextMessage(channelId, contents);
+      String key = prefs.getString('key:$channelId');
+      id = messenger.sendDirectTextMessage(channelId, contents, parsePublicKeyFromPem(key));
     }
     await handleMessage(Message(
       id: id,
