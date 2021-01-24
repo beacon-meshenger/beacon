@@ -167,7 +167,7 @@ class _Message extends StatelessWidget {
                         bottom: endOfThread ? 4.0 : 0.0,
                       ),
                       child: Text(
-                        isLocation ? "Shared Location" : message.data,
+                        isLocation ? "🌍 Shared Location" : message.data,
                         style: TextStyle(
                           color: received ? null : Colors.white,
                           height: 1.4,
